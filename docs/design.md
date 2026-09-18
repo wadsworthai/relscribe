@@ -76,17 +76,19 @@ The commits for a unit are `git log <base>..HEAD --no-merges -- <unit path>`, mi
 
 - One `CHANGELOG.md` per unit, in [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/) format.
 - If the file is missing, semrail creates it with the standard header and an empty `## [Unreleased]` section.
-- A release inserts `## [X.Y.Z] - YYYY-MM-DD` below `## [Unreleased]`. Existing sections are never rewritten.
-- Groups, in Keep a Changelog order:
+- A release inserts `## [X.Y.Z] - YYYY-MM-DD` below `## [Unreleased]`, before the next `##` heading, so anything under Unreleased stays there. Existing lines are never rewritten, and a CRLF file stays CRLF.
+- A file without an Unreleased heading gets `## [Unreleased]` and the new section before its first `##` heading, with the standard header on top when nothing precedes that heading. Older sections keep their own heading style.
+- The date is today in UTC.
+- Only commits that bump appear. Groups, in Keep a Changelog order, empty ones left out:
   - Added: `feat`.
-  - Changed: `perf`, `refactor`, and breaking changes, which are prefixed `**BREAKING:**`.
+  - Changed: `perf`, `refactor`, any type that bumps only through the `bump` key, and breaking changes, which are prefixed `**BREAKING:**`.
   - Fixed: `fix`.
-- Each bullet is the subject's description without type and scope, followed by the short SHA in parentheses as plain text: `- add a who-am-I read (#82) (241aae1)`.
+- Each bullet is the subject's description without type and scope, followed by the short SHA in parentheses as plain text: `- add a who-am-I read (#82) (241aae1)`. Within a group, the oldest commit comes first.
 
 ## Releases and tags
 
-- **Bump timing.** Versions change only in a release commit, never on task branches.
-- **Release commit.** `semrail release --commit` writes one commit whose subject is `chore(release): <name> <old> -> <new>, …`.
+- **Bump timing.** Versions change only in a release commit, never on task branches. `semrail release` refuses to run while tracked files have uncommitted changes, and it writes all of its files or none.
+- **Release commit.** `semrail release --commit` writes one commit whose subject is `chore(release): <name> <old> -> <new>, …`, one entry per released unit in path order. It stages only the files the release wrote.
 - **Release detection.** A commit is a release for a unit when it changes that unit's version. The commit message and any manifest file are never consulted.
 - **Tags.** Tags are annotated and follow the unit's `tag` template. A published tag never moves. If a tag already exists on the same commit, creating it is a no-op. If it exists on another commit, it is a conflict that a human resolves.
 
@@ -97,7 +99,7 @@ Every command accepts `--json` and `--root <path>`. Without `--root`, the root i
 | Command | Does |
 |---|---|
 | `semrail status` | Reports per unit: current version, base, the commits that count, the next version, and warnings |
-| `semrail release [--commit] [--branch]` | Writes the next versions, `sync` files and changelogs. `--commit` makes the release commit. `--branch` first creates `release/<YYYY-MM-DD>[-N]`. It never pushes and never tags |
+| `semrail release [--commit] [--branch]` | Writes the next versions, `sync` files and changelogs of every unit with a next version, or reports that there is nothing to release. `--commit` makes the release commit. `--branch` first creates `release/<YYYY-MM-DD>[-N]` (UTC date; `-N` from 2 when a local or remote-tracking branch has the name). It never pushes and never tags |
 | `semrail tag <from>..<to> [--push <remote>]` | Tags every release commit in the range, plus the most recent untagged release before it |
 | `semrail lint [<subject>…] [--range <from>..<to>]` | Checks that subjects are Conventional Commits, for example on pull request titles in CI |
 
@@ -110,6 +112,12 @@ Every command accepts `--json` and `--root <path>`. Without `--root`, the root i
 - `commits`: every commit selected, newest first, each `{"sha", "subject", "type", "scope", "breaking"}`. `type` and `scope` are `null` when the subject does not parse.
 - `bump`: `"major"`, `"minor"`, `"patch"` or `null`. `next`: the next version, or `null` when nothing bumps.
 - `warnings`: a list of strings. Warnings never change the exit code.
+
+`semrail release --json` prints `{"units": [...], "files": [...], "branch", "commit"}`:
+- `units`: the released units in path order, each `{"path", "name", "version", "next", "bump", "warnings"}`, where `version` is the version before the release.
+- `files`: every file written, relative to the root.
+- `branch`: the release branch, or `null` without `--branch`. `commit`: the release commit's SHA, or `null` without `--commit`.
+- With nothing to release, `units` and `files` are empty and the exit code is 0.
 
 ## Architecture
 

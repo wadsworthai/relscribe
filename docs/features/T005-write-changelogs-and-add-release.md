@@ -109,7 +109,7 @@ All run the CLI in process against real temporary git repositories, with the dat
 - Honouring `SOURCE_DATE_EPOCH` or a `--date` flag. Tests monkeypatch the clock, and no consumer needs another date yet.
 - Refusing to run on a shallow clone. It is a warning, as in `status`.
 - `uv lock` or any other lockfile refresh. That stays in the consumer's steps (`docs/releasing.md`).
-- Updating the README usage section and CLAUDE.md/AGENTS.md "Current state" (see question 11).
+- Updating the README usage section and CLAUDE.md/AGENTS.md "Current state": left to T007 (decision 11).
 
 ## Open questions and risks
 
@@ -127,3 +127,36 @@ All run the CLI in process against real temporary git repositories, with the dat
 12. **Rollback on a mid-release failure.** Recommend restoring the recorded originals (step 4, about 10 lines) so a release writes all or nothing. Alternative: no rollback. The tree was clean before the run, so `git checkout -- .` recovers, but that leaves a half-written multi-unit release for CI to trip over.
 - **Risk:** a `git commit` hook that fails leaves the files written, and the branch too when `--branch` was given. The error is reported (exit 2). Rolling back after a hook failure is not attempted, since the hook may have changed files itself.
 - **Risk:** a remote release branch that the local clone has not fetched is not seen, so the name may collide at push time. The push is the consumer's step, and it will reject the push visibly.
+
+## Decisions
+
+Plan approved. Questions 1–10 and 12 were decided as recommended. On 11, CLAUDE.md/AGENTS.md "Current state" and the README usage section are left to T007, which updates them once for both `release` and `tag`. On 13, the `release --json` paragraph under the CLI table is allowed. See `docs/autopilot/decisions/T005-write-changelogs-and-add-release.md`.
+
+## Implementation
+
+- Test first: `tests/test_changelog.py` and `tests/test_release.py` ran before any code existed. `test_changelog.py` failed at collection (`ImportError: cannot import name 'changelog' from 'semrail'`), and all 25 `test_release.py` tests errored (`semrail.cli has no attribute '_today'`).
+- `src/semrail/changelog.py` (new) has `section`, `insert` and `has_version`, plus `FILE` and `HEADER`.
+- `src/semrail/cli.py` gained the `release` subparser (right after `status`), and `cmd_release` with its helpers `_today`, `_release_branch`, `_release_paths`, `_read_or_none`, `_restore` and `_rel`, as one block after the `status` helpers. The import line also gained `changelog` and `datetime`.
+- The rollback records the manifest, the `sync` files and `CHANGELOG.md` of every released unit before anything is written. It restores them if writing a file or creating the branch fails, and a changelog that did not exist before is deleted. A failure in `git add`/`git commit`, for example from a hook, is reported and not rolled back (plan risk).
+- The written file list is de-duplicated, in case two units' `sync` entries name the same file.
+
+## Acceptance criteria → tests
+
+| AC | Tests |
+|---|---|
+| 1 | `test_release.py::test_release_writes_version_and_creates_the_changelog`, `test_pyproject_unit`; `test_changelog.py::test_missing_file_gets_the_standard_header`, `test_empty_file_gets_the_standard_header` |
+| 2 | `test_changelog.py::test_groups_in_keep_a_changelog_order`, `test_breaking_changes_go_to_changed_with_a_prefix`, `test_commits_that_do_not_bump_are_left_out`, `test_a_type_bumping_through_an_override_goes_to_changed`, `test_type_is_case_insensitive`; `test_release.py::test_bump_override_type_goes_to_changed_and_others_are_left_out` |
+| 3 | `test_changelog.py::test_bullet_is_the_description_without_type_and_scope`, `test_groups_in_keep_a_changelog_order` (oldest first); `test_release.py::test_release_writes_version_and_creates_the_changelog` |
+| 4 | `test_changelog.py::test_inserts_below_unreleased_and_keeps_existing_lines`, `test_content_under_unreleased_stays_there`, `test_unreleased_directly_followed_by_a_release`, `test_unreleased_at_the_end_without_a_final_newline`, `test_unreleased_heading_variants`; `test_release.py::test_existing_changelog_keeps_every_line` |
+| 5 | `test_changelog.py::test_file_without_header_or_unreleased`, `test_file_with_a_title_but_no_unreleased_keeps_its_title`, `test_file_with_only_a_title`; `test_release.py::test_changelog_without_header_or_unreleased` |
+| 6 | `test_changelog.py::test_crlf_stays_crlf`; `test_release.py::test_crlf_changelog_stays_crlf` |
+| 7 | `test_release.py::test_changelog_false_writes_only_versions` |
+| 8 | `test_release.py::test_only_units_with_a_next_version_are_released` |
+| 9 | `test_release.py::test_commit_one_unit`, `test_commit_several_units`, `test_after_a_release_commit_there_is_nothing_to_release` |
+| 10 | `test_release.py::test_branch_is_created_from_the_date`, `test_branch_gets_a_suffix_when_the_name_exists`, `test_branch_suffix_counts_up`, `test_today_is_the_utc_date` |
+| 11 | `test_release.py::test_nothing_to_release` |
+| 12 | `test_release.py::test_uncommitted_tracked_changes_are_refused`, `test_staged_changes_are_refused`, `test_untracked_files_do_not_block` |
+| 13 | `test_release.py::test_a_failing_unit_rolls_back_every_file`, `test_a_failing_unit_removes_changelogs_it_created` |
+| 14 | `test_release.py::test_existing_section_for_the_new_version_is_refused`; `test_changelog.py::test_has_version` |
+| 15 | `test_release.py::test_release_never_pushes_or_tags` |
+| 16 | `test_release.py::test_warnings_are_reported_and_do_not_block`, `test_text_output` |
