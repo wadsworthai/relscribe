@@ -89,8 +89,11 @@ The commits for a unit are `git log <base>..HEAD --no-merges -- <unit path>`, mi
 
 - **Bump timing.** Versions change only in a release commit, never on task branches. `semrail release` refuses to run while tracked files have uncommitted changes, and it writes all of its files or none.
 - **Release commit.** `semrail release --commit` writes one commit whose subject is `chore(release): <name> <old> -> <new>, …`, one entry per released unit in path order. It stages only the files the release wrote.
-- **Release detection.** A commit is a release for a unit when it changes that unit's version. The commit message and any manifest file are never consulted.
-- **Tags.** Tags are annotated and follow the unit's `tag` template. A published tag never moves. If a tag already exists on the same commit, creating it is a no-op. If it exists on another commit, it is a conflict that a human resolves.
+- **Release detection.** A commit is a release for a unit when it raises that unit's version over its parent's. Introducing a version and lowering one (a reverted release) are not releases. Merge commits are never examined; the merged commit that raised the version is. The commit message and any manifest file are never consulted.
+- **Units as of the release.** Units, names and `tag` templates are read as of the release commit, not from the working tree, so a unit renamed, reconfigured or removed later still gets the tag its release implies.
+- **Reconcile.** Besides the range, `semrail tag` looks at each unit's newest release reachable from `<from>` and creates its tag if it is missing, which covers a skipped CI run and a unit released before it had tags. Older untagged releases stay untagged.
+- **Tags.** Tags are annotated, with the message `<name> <version>`, and follow the unit's `tag` template. git needs a committer identity to create them. A published tag never moves. If a tag already exists on the same commit, creating it is a no-op. If it exists on another commit, it is a conflict that a human resolves; the other tags are still created, and the exit code is 4.
+- **Push.** `--push <remote>` pushes only the tags the run created, in one push. A tag the remote already has on another commit is rejected, which is a conflict (exit 4); any other push failure is a git error (exit 2). CI needs a checkout with full history and tags.
 
 ## CLI
 
@@ -100,7 +103,7 @@ Every command accepts `--json` and `--root <path>`. Without `--root`, the root i
 |---|---|
 | `semrail status` | Reports per unit: current version, base, the commits that count, the next version, and warnings |
 | `semrail release [--commit] [--branch]` | Writes the next versions, `sync` files and changelogs of every unit with a next version, or reports that there is nothing to release. `--commit` makes the release commit. `--branch` first creates `release/<YYYY-MM-DD>[-N]` (UTC date; `-N` from 2 when a local or remote-tracking branch has the name). It never pushes and never tags |
-| `semrail tag <from>..<to> [--push <remote>]` | Tags every release commit in the range, plus the most recent untagged release before it |
+| `semrail tag <from>..<to> [--push <remote>]` | Tags every release commit in the range, plus each unit's latest release before it when that one is untagged. CI runs it on each push to the release branch with the push's before and after commits |
 | `semrail lint [<subject>…] [--range <from>..<to>]` | Checks that subjects are Conventional Commits, for example on pull request titles in CI |
 
 - Exit codes: 0 success; 1 lint or validation failed; 2 usage, configuration or git error; 4 tag conflict.
@@ -119,6 +122,11 @@ Every command accepts `--json` and `--root <path>`. Without `--root`, the root i
 - `branch`: the release branch, or `null` without `--branch`. `commit`: the release commit's SHA, or `null` without `--commit`.
 - With nothing to release, `units` and `files` are empty and the exit code is 0.
 
+`semrail tag --json` prints `{"tags": [...], "push": ..., "warnings": [...]}`:
+- `tags`: one object per release, reconciled ones first, then the range oldest first and by unit path within a commit: `tag`, `path`, `name`, `version`, `sha` (the release commit), `result` (`"created"`, `"existing"` or `"conflict"`) and `existing_sha` (the commit the tag already points to, for `"conflict"` only).
+- `push`: `{"remote", "pushed", "rejected"}`, lists of tag names, or `null` without `--push`.
+- `warnings`: the shallow-clone warning, as in `status`.
+
 ## Architecture
 
 ```
@@ -128,6 +136,7 @@ src/semrail/
   history.py    # each unit's base, commits, bump and next version
   units.py      # discovery, config, reading and writing versions
   changelog.py  # Keep a Changelog rendering and insertion
+  tags.py       # release detection, units as of a commit, tagging and pushing tags
   gitutil.py    # the only module that shells out to git
 tests/          # pytest; conftest.py builds real git repos in tmp_path
 ```

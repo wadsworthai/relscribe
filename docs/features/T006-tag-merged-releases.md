@@ -121,3 +121,38 @@ All through the CLI against real temporary repositories (`tests/test_tag.py`), a
 - **Risk:** each candidate commit costs one `ls-tree` and one `git show` per manifest. Candidates are version-line edits, few in practice; measure before optimizing (e.g. `git cat-file --batch`).
 - **Risk:** a `semrail.toml` that was valid under an older semrail but not now makes discovery at an old release commit fail (exit 2). Only reconcile reaches old commits, and only each unit's latest release.
 - **Risk:** git needs a committer identity for annotated tags; without one, `git tag` fails and the run exits 2. `docs/design.md` will say so.
+
+## Decisions
+
+Plan approved with every question as recommended; see `docs/autopilot/decisions/T006-tag-merged-releases.md`. `docs/design.md` now states the rules in Releases and tags ("Release detection" says "raises", plus "Units as of the release", "Reconcile", "Tags" and "Push"), the `tag` row and the `tag --json` shape under CLI, and `tags.py` in Architecture.
+
+## Implementation
+
+- Test first: `tests/test_tag.py` ran before any code existed. `uv run pytest -q --tb=no` gave `39 failed, 172 passed`: every `tag` test failed with `invalid choice: 'tag' (choose from lint, status)`, except `test_range_is_required`, which already expected exit 2.
+- `src/semrail/tags.py` (new): `run(root, from_rev, to_rev, remote)` returns an `Outcome` (`tags`, `push`, `warnings`, `conflict`).
+  - The range's candidates come from one `git log --name-only --no-merges --reverse -Gversion <from>..<to> -- ':(glob)**/package.json' ':(glob)**/pyproject.toml'`. For a candidate, only units whose manifest the commit touched are compared with the parent.
+  - Units at a commit are discovered from a temporary directory named like the repository, holding the commit's manifests (outside `node_modules/`) and its root `pnpm-workspace.yaml` and `semrail.toml`. Snapshots are cached by commit for the run. A commit from before any unit existed (`no unit found`) has no units, so it has no releases. Any other configuration error there is exit 2, prefixed with the short SHA.
+  - Versions are compared as X.Y.Z. If either version is not plain, any difference counts.
+  - Tags are created in order and checked one at a time, so a second release of the same version in one run conflicts with the first.
+- `src/semrail/history.py`: `_version_at` became public `version_at`. Nothing else changed.
+- `src/semrail/gitutil.py`: `GitError` now keeps the failed command's stdout (`exc.stdout`), because `git push --porcelain` reports rejected refs on stdout while exiting 1. This is a small change outside the touch map, and `tags.py` needs it for the push.
+- `src/semrail/cli.py`: the `tag` subparser, `cmd_tag`, `_tag_json` and `_tag_text`, in one block after `status`, plus the import. A range without `..`, with an empty end, with `...` or with more than one `..` is a usage error (exit 2).
+
+## Acceptance criteria → tests (`tests/test_tag.py`)
+
+| AC | Tests |
+|---|---|
+| 1 | `test_version_raise_is_tagged_with_an_annotated_tag`, `test_pyproject_release` |
+| 2 | `test_commits_that_do_not_raise_a_version_are_not_tagged` (4 cases) |
+| 3 | `test_introducing_a_unit_is_not_a_release`, `test_first_commit_in_range_introducing_the_root_unit_is_not_a_release` |
+| 4 | `test_lowering_a_version_is_not_a_release` |
+| 5 | `test_one_commit_releasing_two_units_gets_one_tag_each`, `test_releases_are_listed_oldest_first` |
+| 6 | `test_tag_template_is_read_as_of_the_release_commit`, `test_unit_renamed_or_removed_after_the_release`, `test_dir_placeholder_uses_the_repository_directory_name`, `test_configuration_error_at_a_release_commit_names_the_commit` |
+| 7 | `test_release_merged_with_a_true_merge_is_tagged_on_its_own_commit` |
+| 8 | `test_second_run_reports_existing_tags` |
+| 9 | `test_tag_on_another_commit_is_a_conflict_and_other_tags_are_still_created`, `test_same_tag_twice_in_one_range_conflicts_with_the_first` |
+| 10 | `test_reconcile_tags_the_latest_untagged_release_before_the_range`, `test_reconcile_includes_the_from_commit`, `test_reconcile_reports_an_already_tagged_latest_release_as_existing`, `test_reconcile_is_per_unit`, `test_never_released_unit_has_nothing_to_reconcile`, `test_from_without_any_unit` |
+| 11 | `test_push_sends_only_the_created_tags`, `test_push_with_nothing_created_pushes_nothing`, `test_push_rejected_by_the_remote_is_a_conflict`, `test_push_to_an_unknown_remote_is_a_git_error` (all against a local bare remote in `tmp_path`) |
+| 12 | `test_bad_ranges_are_usage_errors` (5 cases), `test_unknown_revision_is_a_git_error`, `test_range_is_required` |
+| 13 | `test_text_output`, `test_text_output_with_nothing_to_tag`, `test_text_output_for_a_rejected_push` |
+| 14 | `test_shallow_clone_warns` |
