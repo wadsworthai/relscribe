@@ -9,6 +9,11 @@ from pathlib import Path
 class GitError(Exception):
     """A git command failed. The CLI reports it as a git error, exit code 2."""
 
+    def __init__(self, message: str, stdout: str = "") -> None:
+        super().__init__(message)
+        # Kept for commands whose failure is reported on stdout, such as `git push --porcelain`.
+        self.stdout = stdout
+
 
 def git(root: Path, *args: str) -> str:
     """Run `git -C root args…` and return its stdout, or raise GitError."""
@@ -22,7 +27,7 @@ def git(root: Path, *args: str) -> str:
         raise GitError("git is not installed") from None
     if proc.returncode != 0:
         detail = proc.stderr.strip() or f"exit status {proc.returncode}"
-        raise GitError(f"git {' '.join(args)}: {detail}")
+        raise GitError(f"git {' '.join(args)}: {detail}", proc.stdout)
     return proc.stdout
 
 

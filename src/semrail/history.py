@@ -83,14 +83,14 @@ def _last_version_change(root: Path, unit: Unit) -> str | None:
     manifest = _join(unit.path, unit.manifest)
     out = gitutil.git(root, "log", "--format=%H", "-Gversion", "HEAD", "--", manifest)
     for sha in out.split():
-        before = _version_at(root, f"{sha}^", manifest, unit.manifest)
-        after = _version_at(root, sha, manifest, unit.manifest)
+        before = version_at(root, f"{sha}^", manifest, unit.manifest)
+        after = version_at(root, sha, manifest, unit.manifest)
         if before is not None and after is not None and before != after:
             return sha
     return None
 
 
-def _version_at(root: Path, rev: str, path: str, manifest: str) -> str | None:
+def version_at(root: Path, rev: str, path: str, manifest: str) -> str | None:
     """The manifest's version at `rev`; None when the file, the revision or the version is missing or unreadable."""
     try:
         text = gitutil.git(root, "show", f"{rev}:./{path}")

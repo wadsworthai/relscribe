@@ -24,6 +24,10 @@ class ConfigError(Exception):
     """A configuration problem. The CLI reports it as exit code 2."""
 
 
+class NoUnitError(ConfigError):
+    """No unit at all: no workspace, and no version in a root manifest."""
+
+
 @dataclass(frozen=True)
 class Sync:
     """Another file that repeats the version; group 1 of `pattern` holds it."""
@@ -202,7 +206,7 @@ def _root_unit(root: Path) -> Unit:
         unit = _read_unit(root, ".", manifest)
         if unit:
             return unit
-    raise ConfigError(f"no unit found: no workspace, and no version in the root {PACKAGE_JSON} or {PYPROJECT}")
+    raise NoUnitError(f"no unit found: no workspace, and no version in the root {PACKAGE_JSON} or {PYPROJECT}")
 
 
 def _read_unit(root: Path, path: str, manifest: str) -> Unit | None:

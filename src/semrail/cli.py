@@ -10,7 +10,7 @@ from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 
-from semrail import changelog, commits, gitutil, history, units
+from semrail import changelog, commits, gitutil, history, tags, units
 
 # Exit codes, docs/design.md (CLI).
 EXIT_OK = 0
@@ -55,6 +55,10 @@ def _build_parser() -> argparse.ArgumentParser:
     release.add_argument("--commit", action="store_true", help="make the release commit")
     release.add_argument("--branch", action="store_true", help="first create release/<YYYY-MM-DD>[-N]")
     release.set_defaults(func=cmd_release)
+    tag = sub.add_parser("tag", parents=[common], help="tag the release commits in a range")
+    tag.add_argument("range", metavar="<from>..<to>", help="the commits to examine, e.g. a push's before..after")
+    tag.add_argument("--push", metavar="<remote>", help="push the tags created to this remote")
+    tag.set_defaults(func=cmd_tag)
     return parser
 
 
@@ -244,6 +248,49 @@ def _restore(originals: dict[Path, str | None]) -> None:
 
 def _rel(root: Path, path: Path) -> str:
     return path.relative_to(root).as_posix()
+
+
+def cmd_tag(args: argparse.Namespace) -> int:
+    from_rev, sep, to_rev = args.range.partition("..")
+    if not sep or not from_rev or not to_rev or to_rev.startswith(".") or ".." in to_rev:
+        raise SemrailError(f"tag: the range must be <from>..<to>, got {args.range!r}")
+    outcome = tags.run(_root(args), from_rev, to_rev, args.push)
+    _emit(args, _tag_json(outcome), _tag_text(outcome))
+    return EXIT_CONFLICT if outcome.conflict else EXIT_OK
+
+
+def _tag_json(o: tags.Outcome) -> dict[str, Any]:
+    return {
+        "tags": [
+            {
+                "tag": t.tag,
+                "path": t.release.unit.path,
+                "name": t.release.unit.name,
+                "version": t.release.unit.version,
+                "sha": t.release.sha,
+                "result": t.result,
+                "existing_sha": t.existing_sha,
+            }
+            for t in o.tags
+        ],
+        "push": {"remote": o.push.remote, "pushed": o.push.pushed, "rejected": o.push.rejected} if o.push else None,
+        "warnings": o.warnings,
+    }
+
+
+def _tag_text(o: tags.Outcome) -> str:
+    lines = []
+    for t in o.tags:
+        line = f"{t.result} {t.tag} {t.release.sha[:7]}"
+        lines.append(f"{line}: already on {t.existing_sha[:7]}" if t.existing_sha else line)
+    if not lines:
+        lines.append("no releases to tag")
+    if o.push:
+        n = len(o.push.pushed)
+        lines.append(f"pushed {n} {'tag' if n == 1 else 'tags'} to {o.push.remote}")
+        lines += [f"rejected by {o.push.remote}: {name}" for name in o.push.rejected]
+    lines += [f"warning: {w}" for w in o.warnings]
+    return "\n".join(lines)
 
 
 def main(argv: list[str] | None = None) -> int:
