@@ -18,7 +18,7 @@
 - Run the CLI end-to-end against temporary git repos, and assert on exit codes and `--json` output, not on internals.
 - Use one test file per feature, named after it.
 - A bug fix comes with a regression test that was seen failing first.
-- `tests/test_docs.py` (planned, added with `pyproject.toml`) checks two things: that CLAUDE.md and AGENTS.md differ only in their header, and that every `docs/**/*.md` appears in the Documentation map.
+- `tests/test_docs.py` checks two things: that CLAUDE.md and AGENTS.md differ only in their header (the first 3 lines), and that every top-level `docs/*.md` appears in the Documentation map. Subdirectories of `docs/` hold task records, not product docs, and are not checked.
 
 ## Public repository
 

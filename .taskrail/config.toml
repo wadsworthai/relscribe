@@ -30,8 +30,8 @@ url_template = ""            # for other hosts: {web_url} {repo} {base} {head} {
 scope = ""                   # default Conventional Commits scope of pull request titles
 
 [checks]                     # commands the task kinds run as quality gates
-# test = "make test"
-# lint = "make lint"
+test = "uv run pytest"
+# lint: none, no linter is configured by design (docs/development.md)
 
 [autopilot]
 enabled = true

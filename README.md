@@ -50,10 +50,11 @@ Every command supports:
 | 0 | Success |
 | 1 | Validation failed |
 | 2 | Usage, configuration or git error |
+| 4 | Tag conflict |
 
 ## Configuration
 
-<!-- TODO: document `.semrail/config.toml` keys, including how paths map to packages in a monorepo. -->
+<!-- TODO: document the keys of the optional `semrail.toml` at the repository root, including how paths map to packages in a monorepo. -->
 
 ## Development
 
