@@ -30,3 +30,17 @@ Reviewed: `tags.py` in full and the `gitutil.py`/`history.py` diff in 5416aa8; t
 |---|---|---|---|---|
 | 1 | Keep `GitError.stdout` in `gitutil.py` | keep · second calling style · treat all push failures as exit 2 | as recommended | Small, and it's the only way to honour "rejected tag → exit 4" while `gitutil` stays the only module that runs git. |
 | 2 | Detecting "no unit" by the `ConfigError` message prefix | message prefix · `NoUnitError(ConfigError)` subclass | **subclass** | Matching message text is brittle, and the subclass is 3 lines. `units.py` is outside T005's touch map, so it can't conflict. Existing callers that catch `ConfigError` keep working. |
+
+## rebase after T004 and T005
+
+T004 (1b5089a) and T005 (6f1ef2d) were squash-merged into main. The branch was rebased with `git rebase --onto origin/main 0473879`.
+
+| # | Question | Options | Decision | Reason |
+|---|---|---|---|---|
+| 1 | Conflict in `docs/features/README.md` | keep both · stop | **keep both** | Known class 2. |
+| 2 | Conflict in `docs/autopilot/decisions/README.md` | keep both · stop | **keep both** | Known class 2. |
+| 3 | Conflict in `src/semrail/cli.py`: the import line, the subparser blocks, the command blocks | keep both · stop | **keep both** (`changelog` and `tags` both imported; `release` then `tag`) | Covered by the run's touch map (decision 3): additive blocks, kept both. |
+| 4 | Conflict in `docs/design.md`: Releases and tags, CLI rows, `--json` paragraphs | combine by owner · stop | **combine**: T005's "Bump timing"/"Release commit" and `release` row; T006's detection, units-as-of, reconcile, tags and push bullets and `tag` row; both `--json` paragraphs | Covered by the touch map. Each lane owns its bullets, so nothing is lost. |
+| 5 | Conflict in `TODO.md` (T005 and T006 rows) | ✅ wins · stop | **✅ on both** | Known class 1. |
+
+After the rebase: `git diff --check` reports no conflict markers, `taskrail checks T006` passed (255 tests, the union of both lanes' suites), `taskrail validate` reports 0 errors and 0 warnings, and `semrail --help` lists `lint`, `status`, `release` and `tag`.
