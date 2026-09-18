@@ -21,3 +21,12 @@ Reviewed: `docs/features/T006-tag-merged-releases.md` at 2844884, the plan's dif
 | 10 | `tag --json` paragraph under CLI and `tags.py` in Architecture | yes · no | **yes** | Same as T004 and T005. |
 
 Do not edit CLAUDE.md or AGENTS.md: T005 runs in parallel, and T007 updates "Current state" once for `release` and `tag`. Implement test-first and record the failing run.
+
+## implement gate
+
+Reviewed: `tags.py` in full and the `gitutil.py`/`history.py` diff in 5416aa8; the test-first evidence (39 failures before the code existed); `taskrail checks T006` re-run (211 passed). Exercised on a scratch pnpm repository with a local bare remote. `tag <A>..HEAD --push origin` created `@x/api@0.2.0` (reconciled at `<from>`), `@x/api@0.3.0` and `@x/web@1.1.0` (two units in one commit), pushed 3 tags, exit 0. A rerun reported all 3 as `existing` and pushed 0, exit 0. The remote holds exactly the 3 tags.
+
+| # | Question | Options | Decision | Reason |
+|---|---|---|---|---|
+| 1 | Keep `GitError.stdout` in `gitutil.py` | keep · second calling style · treat all push failures as exit 2 | as recommended | Small, and it's the only way to honour "rejected tag → exit 4" while `gitutil` stays the only module that runs git. |
+| 2 | Detecting "no unit" by the `ConfigError` message prefix | message prefix · `NoUnitError(ConfigError)` subclass | **subclass** | Matching message text is brittle, and the subclass is 3 lines. `units.py` is outside T005's touch map, so it can't conflict. Existing callers that catch `ConfigError` keep working. |
