@@ -34,3 +34,9 @@ Reviewed: the diff `ce6e880..339fb09`, with `units.py` read in full for `discove
 | 1 | Implementation choices within the plan: `ValueError` for a non-plain new version, `ConfigError` when the manifest changed since `discover`, sequential sync edits on the same file, `Unit.bump` as overrides only | accept · change | **accept** | Each follows the approved plan. `ValueError` marks a caller bug, not configuration. |
 
 Carried to T004: wire `units.ConfigError` into `main` (exit 2) and test AC 14. Merge `Unit.bump` over `commits.DEFAULT_BUMPS`. Convert `ValueError` from `commits`/`units` into exit 2, never a traceback.
+
+## rebase after T001
+
+T001 was squash-merged into main as df184de, after an earlier plain merge (a8dfa74) was removed from main at the human's request. The branch was rebased onto origin/main (df184de) with `git rebase --onto`. There were no conflicts.
+
+After the rebase: `git diff --check` reports no conflict markers, `taskrail checks` passed, and `taskrail validate` reports 0 errors and 0 warnings.
