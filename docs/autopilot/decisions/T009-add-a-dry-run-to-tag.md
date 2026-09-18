@@ -16,3 +16,9 @@ Reviewed: `docs/features/T009-add-a-dry-run-to-tag.md` at 53022a1 (the artifact 
 | 5 | Text wording | `<result> <tag> <sha>` with ` (reconciled)` · extra header | as recommended | Same format as a real run. |
 
 Leave README.md to T007. Implement test-first and record the failing run.
+
+## implement gate
+
+Reviewed: the diff of `tags.py` and `cli.py` in 0db7c71 (small and within the plan), the updated `docs/design.md`, and the test-first evidence (13 failures before the code existed). `taskrail checks T009` re-run: 265 passed. Exercised on a scratch repository: `tag --dry-run <sha>^..<sha>` printed `would-create @x/api@0.2.0 e188789` with exit 0 and created no tag, and `--dry-run --push origin` printed `relscribe: tag: --dry-run and --push cannot be combined` with exit 2.
+
+No decisions were needed. The stage is approved.
