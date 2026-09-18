@@ -11,3 +11,4 @@
 | T008 | Rename the tool from semrail to relscribe | [T008](T008-rename-the-tool-from-semrail-to-verstamp.md) |
 | T009 | Add a dry run to tag | [T009](T009-add-a-dry-run-to-tag.md) |
 | T007 | Add CI, PyPI publishing and uvx-first usage docs | [T007](T007-add-ci-pypi-publishing-and-uvx-first-usa.md) |
+| T010 | Release 0.1.0 with relscribe itself | [T010](T010-release-0-1-0-with-relscribe-itself.md) |

@@ -1,6 +1,6 @@
 [project]
 name = "relscribe"
-version = "0.0.0"
+version = "0.1.0"
 description = "Semantic versioning and changelogs from Conventional Commits, for one or more packages per repository."
 readme = "README.md"
 license = "MIT"
