@@ -12,7 +12,7 @@ Done when: semrail 0.1.0 is on PyPI, released and tagged by semrail itself
 
 | ✓  | ID   | Kind    | Pts | Depends On | Title                          | Description                    |
 |----|------|---------|-----|------------|--------------------------------|--------------------------------|
-| ⬜ | T001 | chore   | 2   | —          | Scaffold the package, CLI skeleton and test fixtures | pyproject with uv_build, cli.py with --json/--root and exit codes, conftest building temp git repos, tests/test_docs.py (docs/development.md). |
+| ✅ | T001 | chore   | 2   | —          | Scaffold the package, CLI skeleton and test fixtures | pyproject with uv_build, cli.py with --json/--root and exit codes, conftest building temp git repos, tests/test_docs.py (docs/development.md). |
 | ⬜ | T002 | feature | 3   | T001       | Parse Conventional Commit subjects and add lint | Subject parser, bump rules and semrail lint, per docs/design.md Versioning and Commit parsing. |
 | ⬜ | T003 | feature | 5   | T001       | Discover units and read and write their versions | Workspace discovery, semrail.toml, package.json/pyproject versions, sync and exclude, per docs/design.md Units. |
 | ⬜ | T004 | feature | 5   | T002, T003 | Select each unit's commits and add status | Base resolution, path attribution and semrail status, per docs/design.md Selecting a unit's commits. |
