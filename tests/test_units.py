@@ -1,6 +1,7 @@
 """Unit discovery, semrail.toml, and reading and writing versions (docs/design.md, Units).
 
-These call `semrail.units` directly: no command exposes units yet.
+These call `semrail.units` directly to cover writing versions and every configuration rule;
+`semrail status` (tests/test_status.py) covers units through the CLI.
 """
 
 from __future__ import annotations
