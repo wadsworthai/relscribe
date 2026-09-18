@@ -7,7 +7,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from semrail import gitutil
+from relscribe import gitutil
 
 # Commit parsing: the scope is free text that may contain ":" but no parentheses, so a
 # trailing "(#82)" in the description is never mistaken for part of it.

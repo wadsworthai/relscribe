@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from semrail.commits import DEFAULT_BUMPS, Commit, bump, next_version, parse
+from relscribe.commits import DEFAULT_BUMPS, Commit, bump, next_version, parse
 
 
 @pytest.mark.parametrize(

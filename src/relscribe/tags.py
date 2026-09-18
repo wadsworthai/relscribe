@@ -7,8 +7,8 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from semrail import gitutil, history, units
-from semrail.units import Unit
+from relscribe import gitutil, history, units
+from relscribe.units import Unit
 
 # Only the files discovery reads are materialized for a past commit.
 _MANIFESTS = {units.PACKAGE_JSON, units.PYPROJECT}

@@ -4,7 +4,7 @@ This is the spec the code answers to. What is not built yet is listed in `TODO.m
 
 ## Scope
 
-semrail does four things for every versioned unit in a repository:
+relscribe does four things for every versioned unit in a repository:
 - It computes the next version from Conventional Commits.
 - It writes versions and changelogs in one release commit.
 - It tags merged releases.
@@ -19,7 +19,7 @@ A unit is a directory with its own version.
 - **Source of truth.** The version is read from the unit's `package.json` `version` or `pyproject.toml` `[project].version`. That is the only authoritative copy, and there is no repository-wide version.
 - **Name.** `{name}` is the manifest's package name and `{dir}` is the unit directory's base name.
 
-`semrail.toml` at the repository root is optional and only overrides defaults. It can be set globally or per unit (`[units."<path>"]`):
+`relscribe.toml` at the repository root is optional and only overrides defaults. It can be set globally or per unit (`[units."<path>"]`):
 
 | Key | Default | Purpose |
 |---|---|---|
@@ -34,11 +34,11 @@ A unit is a directory with its own version.
 - A `sync` `file` is relative to the unit directory and must not be the unit's manifest. The pattern is a Python regular expression applied with `re.MULTILINE`.
 - Writing a version checks every `sync` entry first and writes nothing if one fails: a missing file, a pattern that matches nothing, or a match whose group is not the current version is a configuration error. Otherwise every match is replaced.
 
-semrail never edits `.gitattributes` and never installs merge drivers.
+relscribe never edits `.gitattributes` and never installs merge drivers.
 
 ## Versioning
 
-- semrail follows [SemVer 2.0.0](https://semver.org/) and reads [Conventional Commits 1.0.0](https://www.conventionalcommits.org/). Versions use plain `X.Y.Z` spelling in every ecosystem.
+- relscribe follows [SemVer 2.0.0](https://semver.org/) and reads [Conventional Commits 1.0.0](https://www.conventionalcommits.org/). Versions use plain `X.Y.Z` spelling in every ecosystem.
 - There are no pre-releases and no build metadata.
 
 | Commit | ≥ 1.0.0 | 0.y.z |
@@ -56,8 +56,8 @@ The highest bump among a unit's commits wins. The `bump` key's entries add types
 - The type is case-insensitive, as Conventional Commits requires: `Feat:` is `feat`.
 - A trailing reference such as `(#82)` or `(#T054)` stays part of the description.
 - A body line starting with `BREAKING CHANGE: ` or `BREAKING-CHANGE: ` marks the commit breaking, wherever it is in the body. The token is upper-case only.
-- A subject that does not parse contributes nothing. It is reported as a warning, and `semrail lint` fails on it.
-- `semrail lint --range` skips merge commits, like the selection of a unit's commits.
+- A subject that does not parse contributes nothing. It is reported as a warning, and `relscribe lint` fails on it.
+- `relscribe lint --range` skips merge commits, like the selection of a unit's commits.
 
 ## Selecting a unit's commits
 
@@ -75,7 +75,7 @@ The commits for a unit are `git log <base>..HEAD --no-merges -- <unit path>`, mi
 ## Changelog
 
 - One `CHANGELOG.md` per unit, in [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/) format.
-- If the file is missing, semrail creates it with the standard header and an empty `## [Unreleased]` section.
+- If the file is missing, relscribe creates it with the standard header and an empty `## [Unreleased]` section.
 - A release inserts `## [X.Y.Z] - YYYY-MM-DD` below `## [Unreleased]`, before the next `##` heading, so anything under Unreleased stays there. Existing lines are never rewritten, and a CRLF file stays CRLF.
 - A file without an Unreleased heading gets `## [Unreleased]` and the new section before its first `##` heading, with the standard header on top when nothing precedes that heading. Older sections keep their own heading style.
 - The date is today in UTC.
@@ -87,11 +87,11 @@ The commits for a unit are `git log <base>..HEAD --no-merges -- <unit path>`, mi
 
 ## Releases and tags
 
-- **Bump timing.** Versions change only in a release commit, never on task branches. `semrail release` refuses to run while tracked files have uncommitted changes, and it writes all of its files or none.
-- **Release commit.** `semrail release --commit` writes one commit whose subject is `chore(release): <name> <old> -> <new>, …`, one entry per released unit in path order. It stages only the files the release wrote.
+- **Bump timing.** Versions change only in a release commit, never on task branches. `relscribe release` refuses to run while tracked files have uncommitted changes, and it writes all of its files or none.
+- **Release commit.** `relscribe release --commit` writes one commit whose subject is `chore(release): <name> <old> -> <new>, …`, one entry per released unit in path order. It stages only the files the release wrote.
 - **Release detection.** A commit is a release for a unit when it raises that unit's version over its parent's. Introducing a version and lowering one (a reverted release) are not releases. Merge commits are never examined; the merged commit that raised the version is. The commit message and any manifest file are never consulted.
 - **Units as of the release.** Units, names and `tag` templates are read as of the release commit, not from the working tree, so a unit renamed, reconfigured or removed later still gets the tag its release implies.
-- **Reconcile.** Besides the range, `semrail tag` looks at each unit's newest release reachable from `<from>` and creates its tag if it is missing, which covers a skipped CI run and a unit released before it had tags. Older untagged releases stay untagged.
+- **Reconcile.** Besides the range, `relscribe tag` looks at each unit's newest release reachable from `<from>` and creates its tag if it is missing, which covers a skipped CI run and a unit released before it had tags. Older untagged releases stay untagged.
 - **Tags.** Tags are annotated, with the message `<name> <version>`, and follow the unit's `tag` template. git needs a committer identity to create them. A published tag never moves. If a tag already exists on the same commit, creating it is a no-op. If it exists on another commit, it is a conflict that a human resolves; the other tags are still created, and the exit code is 4.
 - **Push.** `--push <remote>` pushes only the tags the run created, in one push. A tag the remote already has on another commit is rejected, which is a conflict (exit 4); any other push failure is a git error (exit 2). CI needs a checkout with full history and tags.
 
@@ -101,28 +101,28 @@ Every command accepts `--json` and `--root <path>`. Without `--root`, the root i
 
 | Command | Does |
 |---|---|
-| `semrail status` | Reports per unit: current version, base, the commits that count, the next version, and warnings |
-| `semrail release [--commit] [--branch]` | Writes the next versions, `sync` files and changelogs of every unit with a next version, or reports that there is nothing to release. `--commit` makes the release commit. `--branch` first creates `release/<YYYY-MM-DD>[-N]` (UTC date; `-N` from 2 when a local or remote-tracking branch has the name). It never pushes and never tags |
-| `semrail tag <from>..<to> [--push <remote>]` | Tags every release commit in the range, plus each unit's latest release before it when that one is untagged. CI runs it on each push to the release branch with the push's before and after commits |
-| `semrail lint [<subject>…] [--range <from>..<to>]` | Checks that subjects are Conventional Commits, for example on pull request titles in CI |
+| `relscribe status` | Reports per unit: current version, base, the commits that count, the next version, and warnings |
+| `relscribe release [--commit] [--branch]` | Writes the next versions, `sync` files and changelogs of every unit with a next version, or reports that there is nothing to release. `--commit` makes the release commit. `--branch` first creates `release/<YYYY-MM-DD>[-N]` (UTC date; `-N` from 2 when a local or remote-tracking branch has the name). It never pushes and never tags |
+| `relscribe tag <from>..<to> [--push <remote>]` | Tags every release commit in the range, plus each unit's latest release before it when that one is untagged. CI runs it on each push to the release branch with the push's before and after commits |
+| `relscribe lint [<subject>…] [--range <from>..<to>]` | Checks that subjects are Conventional Commits, for example on pull request titles in CI |
 
 - Exit codes: 0 success; 1 lint or validation failed; 2 usage, configuration or git error; 4 tag conflict.
-- Errors go to stderr prefixed with `semrail: `.
+- Errors go to stderr prefixed with `relscribe: `.
 
-`semrail status --json` prints `{"units": [...]}`, one object per unit in path order, which CI can read, for example to find the units a release touches (`next` is not `null`):
+`relscribe status --json` prints `{"units": [...]}`, one object per unit in path order, which CI can read, for example to find the units a release touches (`next` is not `null`):
 - `path`, `name`, `version`: the unit and its current version.
 - `base`: `{"kind", "sha", "tag"}`. `kind` is `"tag"`, `"version-change"` or `"history"`. `sha` is `null` only for `"history"`, and `tag` is set only for `"tag"`.
 - `commits`: every commit selected, newest first, each `{"sha", "subject", "type", "scope", "breaking"}`. `type` and `scope` are `null` when the subject does not parse.
 - `bump`: `"major"`, `"minor"`, `"patch"` or `null`. `next`: the next version, or `null` when nothing bumps.
 - `warnings`: a list of strings. Warnings never change the exit code.
 
-`semrail release --json` prints `{"units": [...], "files": [...], "branch", "commit"}`:
+`relscribe release --json` prints `{"units": [...], "files": [...], "branch", "commit"}`:
 - `units`: the released units in path order, each `{"path", "name", "version", "next", "bump", "warnings"}`, where `version` is the version before the release.
 - `files`: every file written, relative to the root.
 - `branch`: the release branch, or `null` without `--branch`. `commit`: the release commit's SHA, or `null` without `--commit`.
 - With nothing to release, `units` and `files` are empty and the exit code is 0.
 
-`semrail tag --json` prints `{"tags": [...], "push": ..., "warnings": [...]}`:
+`relscribe tag --json` prints `{"tags": [...], "push": ..., "warnings": [...]}`:
 - `tags`: one object per release, reconciled ones first, then the range oldest first and by unit path within a commit: `tag`, `path`, `name`, `version`, `sha` (the release commit), `result` (`"created"`, `"existing"` or `"conflict"`) and `existing_sha` (the commit the tag already points to, for `"conflict"` only).
 - `push`: `{"remote", "pushed", "rejected"}`, lists of tag names, or `null` without `--push`.
 - `warnings`: the shallow-clone warning, as in `status`.
@@ -130,7 +130,7 @@ Every command accepts `--json` and `--root <path>`. Without `--root`, the root i
 ## Architecture
 
 ```
-src/semrail/
+src/relscribe/
   cli.py        # argparse; each subcommand is a thin cmd_*(args) -> int
   commits.py    # subject parsing and bump rules
   history.py    # each unit's base, commits, bump and next version
@@ -141,8 +141,8 @@ src/semrail/
 tests/          # pytest; conftest.py builds real git repos in tmp_path
 ```
 
-Configuration is read with `tomllib`. `pnpm-workspace.yaml` is read with a minimal parser for its `packages` list, which keeps semrail free of runtime dependencies.
+Configuration is read with `tomllib`. `pnpm-workspace.yaml` is read with a minimal parser for its `packages` list, which keeps relscribe free of runtime dependencies.
 
 ## Distribution
 
-semrail is published to PyPI and tagged `vX.Y.Z` in git. Consumers run a pinned version with `uvx semrail@X.Y.Z …`, so their CI needs only uv. semrail versions itself: it is a single-unit repository with `tag = "v{version}"`.
+relscribe is published to PyPI and tagged `vX.Y.Z` in git. Consumers run a pinned version with `uvx relscribe@X.Y.Z …`, so their CI needs only uv. relscribe versions itself: it is a single-unit repository with `tag = "v{version}"`.

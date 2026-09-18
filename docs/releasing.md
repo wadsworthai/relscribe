@@ -16,8 +16,8 @@
 
 The version is written only in `pyproject.toml`. The tag is `v` plus that version.
 
-Once semrail can release itself:
-1. On an up-to-date `main`, run `uv run semrail release --branch --commit`, then `uv lock`, and amend the commit. Push the branch and open a PR titled `chore(release): X.Y.Z`.
-2. After the squash merge, CI runs `semrail tag` on the pushed range and publishes the tagged version to PyPI. A published tag never moves.
+Once relscribe can release itself:
+1. On an up-to-date `main`, run `uv run relscribe release --branch --commit`, then `uv lock`, and amend the commit. Push the branch and open a PR titled `chore(release): X.Y.Z`.
+2. After the squash merge, CI runs `relscribe tag` on the pushed range and publishes the tagged version to PyPI. A published tag never moves.
 
-Until then, cut releases by hand following the same steps: set the version, write the changelog section in the same format, run `uv lock`, merge, then `git tag -a vX.Y.Z <merge commit> -m "semrail X.Y.Z"` and push.
+Until then, cut releases by hand following the same steps: set the version, write the changelog section in the same format, run `uv lock`, merge, then `git tag -a vX.Y.Z <merge commit> -m "relscribe X.Y.Z"` and push.

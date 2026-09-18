@@ -1,4 +1,4 @@
-"""`semrail status`: base resolution, each unit's commits, next versions and warnings.
+"""`relscribe status`: base resolution, each unit's commits, next versions and warnings.
 
 docs/design.md, Selecting a unit's commits, Versioning and CLI.
 """
@@ -67,7 +67,7 @@ def test_tag_of_the_current_version_is_the_base(cli, repo):
 
 
 def test_tag_template_from_config(cli, repo):
-    repo.commit("chore: init", {"package.json": pkg("app", "1.0.0"), "semrail.toml": 'tag = "v{version}"\n'})
+    repo.commit("chore: init", {"package.json": pkg("app", "1.0.0"), "relscribe.toml": 'tag = "v{version}"\n'})
     tagged = repo.commit("feat: x", {"a.txt": "1\n"})
     repo.git("tag", "v1.0.0")  # a lightweight tag works too
     repo.commit("fix: y", {"a.txt": "2\n"})
@@ -155,7 +155,7 @@ def test_exclude_drops_commits_whose_unit_files_all_match(cli, repo, scope):
     if scope == "unit":
         config = '[units."apps/a"]\n' + config
     workspace(repo, "a")
-    repo.commit("chore: config", {"semrail.toml": config})
+    repo.commit("chore: config", {"relscribe.toml": config})
     repo.git("tag", "@scope/a@1.0.0")
     repo.commit("feat: tests only", {"apps/a/tests/t.js": "1\n"})
     repo.commit("feat: docs only", {"apps/a/README.md": "1\n", "apps/a/docs/deep/x.md": "1\n"})
@@ -169,7 +169,7 @@ def test_exclude_drops_commits_whose_unit_files_all_match(cli, repo, scope):
 
 
 def test_exclude_in_a_root_unit(cli, repo):
-    repo.commit("chore: init", {"pyproject.toml": pyproject("app", "1.0.0"), "semrail.toml": 'exclude = ["tests/**"]\n'})
+    repo.commit("chore: init", {"pyproject.toml": pyproject("app", "1.0.0"), "relscribe.toml": 'exclude = ["tests/**"]\n'})
     repo.git("tag", "app@1.0.0")
     repo.commit("feat: tests only", {"tests/t.py": "1\n"})
     src = repo.commit("fix: source", {"src/app.py": "1\n"})
@@ -253,7 +253,7 @@ def test_breaking_flag_in_commits(cli, repo):
     ],
 )
 def test_bump_overrides_merge_over_the_defaults(cli, repo, bump, subjects, expected):
-    repo.commit("chore: init", {"package.json": pkg("app", "1.0.0"), "semrail.toml": f"[bump]\n{bump}\n"})
+    repo.commit("chore: init", {"package.json": pkg("app", "1.0.0"), "relscribe.toml": f"[bump]\n{bump}\n"})
     repo.git("tag", "app@1.0.0")
     for i, subject in enumerate(subjects):
         repo.commit(subject, {f"f{i}.txt": subject})
@@ -262,7 +262,7 @@ def test_bump_overrides_merge_over_the_defaults(cli, repo, bump, subjects, expec
 
 def test_per_unit_bump_override(cli, repo):
     workspace(repo, "a", "b")
-    repo.commit("chore: config", {"semrail.toml": '[units."apps/a".bump]\ndocs = "patch"\n'})
+    repo.commit("chore: config", {"relscribe.toml": '[units."apps/a".bump]\ndocs = "patch"\n'})
     repo.commit("docs: both", {"apps/a/README.md": "1\n", "apps/b/README.md": "1\n"})
     units = status(cli, repo)
     assert (units["apps/a"]["next"], units["apps/b"]["next"]) == ("1.0.1", None)
@@ -339,11 +339,11 @@ def test_json_after_subcommand_and_enclosing_repository(cli, repo, monkeypatch):
 @pytest.mark.parametrize(
     "files",
     [
-        {"package.json": pkg("app", "1.0.0"), "semrail.toml": "unknown = 1\n"},
-        {"package.json": pkg("app", "1.0.0"), "semrail.toml": '[bump]\nfeat = "huge"\n'},
-        {"package.json": pkg("app", "1.0.0"), "semrail.toml": 'tag = "{nope}"\n'},
-        {"package.json": pkg("app", "1.0.0"), "semrail.toml": "not toml ==\n"},
-        {"package.json": pkg("app", "1.0"), "semrail.toml": ""},
+        {"package.json": pkg("app", "1.0.0"), "relscribe.toml": "unknown = 1\n"},
+        {"package.json": pkg("app", "1.0.0"), "relscribe.toml": '[bump]\nfeat = "huge"\n'},
+        {"package.json": pkg("app", "1.0.0"), "relscribe.toml": 'tag = "{nope}"\n'},
+        {"package.json": pkg("app", "1.0.0"), "relscribe.toml": "not toml ==\n"},
+        {"package.json": pkg("app", "1.0"), "relscribe.toml": ""},
         {"package.json": pkg("app", "v1.0.0")},
         {"package.json": pkg("app", "1.0.0-rc.1")},
         {"package.json": "{not json"},
@@ -354,7 +354,7 @@ def test_configuration_errors_exit_2(cli, repo, files):
     repo.commit("chore: init", files)
     result = cli("--root", str(repo.path), "status")
     assert result.code == 2
-    assert result.err.startswith("semrail: ")
+    assert result.err.startswith("relscribe: ")
     assert result.out == ""
 
 
@@ -362,14 +362,14 @@ def test_repository_without_commits_is_an_error(cli, repo):
     repo.write({"package.json": pkg("app", "1.0.0")})
     result = cli("--root", str(repo.path), "status")
     assert result.code == 2
-    assert result.err.startswith("semrail: ")
+    assert result.err.startswith("relscribe: ")
 
 
 def test_outside_a_repository_is_an_error(cli, tmp_path):
     (tmp_path / "package.json").write_text(pkg("app", "1.0.0"))
     result = cli("--root", str(tmp_path), "status")
     assert result.code == 2
-    assert result.err.startswith("semrail: ")
+    assert result.err.startswith("relscribe: ")
 
 
 # Shallow clones (AC 14)

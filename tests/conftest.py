@@ -11,7 +11,7 @@ from typing import Any
 
 import pytest
 
-from semrail.cli import main
+from relscribe.cli import main
 
 
 @dataclass
@@ -74,7 +74,7 @@ class Result:
 
 @pytest.fixture
 def cli(capsys: pytest.CaptureFixture[str]):
-    """Run `semrail <argv>` in process and return its exit code and output."""
+    """Run `relscribe <argv>` in process and return its exit code and output."""
 
     def run(*argv: str) -> Result:
         code = main(list(argv))

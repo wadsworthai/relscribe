@@ -10,7 +10,7 @@ from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 
-from semrail import changelog, commits, gitutil, history, tags, units
+from relscribe import changelog, commits, gitutil, history, tags, units
 
 # Exit codes, docs/design.md (CLI).
 EXIT_OK = 0
@@ -19,8 +19,8 @@ EXIT_ERROR = 2
 EXIT_CONFLICT = 4
 
 
-class SemrailError(Exception):
-    """An error reported as `semrail: <message>` on stderr, exiting with `code`."""
+class RelscribeError(Exception):
+    """An error reported as `relscribe: <message>` on stderr, exiting with `code`."""
 
     def __init__(self, message: str, code: int = EXIT_ERROR) -> None:
         super().__init__(message)
@@ -29,7 +29,7 @@ class SemrailError(Exception):
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="semrail",
+        prog="relscribe",
         description="SemVer versions and changelogs from Conventional Commits.",
     )
     parser.add_argument("--version", action="store_true", help="print the version and exit")
@@ -76,11 +76,11 @@ def _emit(args: argparse.Namespace, data: Any, text: str) -> None:
 
 def cmd_lint(args: argparse.Namespace) -> int:
     if not args.subjects and args.range is None:
-        raise SemrailError("lint: give at least one <subject> or --range <from>..<to>")
+        raise RelscribeError("lint: give at least one <subject> or --range <from>..<to>")
     checked: list[tuple[str | None, str]] = [(None, s) for s in args.subjects]
     if args.range is not None:
         if ".." not in args.range:
-            raise SemrailError(f"lint: --range must be <from>..<to>, got {args.range!r}")
+            raise RelscribeError(f"lint: --range must be <from>..<to>, got {args.range!r}")
         # Only a range needs a repository, so `lint <subject>` runs anywhere.
         checked += [(e.sha, e.subject) for e in commits.log(_root(args), args.range)]
 
@@ -140,7 +140,7 @@ def cmd_release(args: argparse.Namespace) -> int:
     root = _root(args)
     # On a dirty tree a second run would count the same commits again and release twice.
     if gitutil.git(root, "status", "--porcelain", "--untracked-files=no").strip():
-        raise SemrailError("release: tracked files have uncommitted changes; commit or stash them first")
+        raise RelscribeError("release: tracked files have uncommitted changes; commit or stash them first")
     released = [s for s in history.status(root, units.discover(root)) if s.next]
     if not released:
         _emit(args, {"units": [], "files": [], "branch": None, "commit": None}, "nothing to release")
@@ -154,7 +154,7 @@ def cmd_release(args: argparse.Namespace) -> int:
         path = root / s.unit.path / changelog.FILE
         text = _read_or_none(path)
         if text is not None and changelog.has_version(text, s.next):
-            raise SemrailError(f"release: {_rel(root, path)} already has a section for {s.next}")
+            raise RelscribeError(f"release: {_rel(root, path)} already has a section for {s.next}")
         entry = changelog.section(s.next, date, s.commits, {**commits.DEFAULT_BUMPS, **s.unit.bump})
         changelogs[path] = changelog.insert(text, entry)
 
@@ -253,7 +253,7 @@ def _rel(root: Path, path: Path) -> str:
 def cmd_tag(args: argparse.Namespace) -> int:
     from_rev, sep, to_rev = args.range.partition("..")
     if not sep or not from_rev or not to_rev or to_rev.startswith(".") or ".." in to_rev:
-        raise SemrailError(f"tag: the range must be <from>..<to>, got {args.range!r}")
+        raise RelscribeError(f"tag: the range must be <from>..<to>, got {args.range!r}")
     outcome = tags.run(_root(args), from_rev, to_rev, args.push)
     _emit(args, _tag_json(outcome), _tag_text(outcome))
     return EXIT_CONFLICT if outcome.conflict else EXIT_OK
@@ -301,19 +301,19 @@ def main(argv: list[str] | None = None) -> int:
         return exc.code if isinstance(exc.code, int) else EXIT_ERROR
 
     if args.version:
-        v = version("semrail")
+        v = version("relscribe")
         _emit(args, {"version": v}, v)
         return EXIT_OK
     if not getattr(args, "func", None):
         parser.print_usage(sys.stderr)
-        print("semrail: error: a command is required", file=sys.stderr)
+        print("relscribe: error: a command is required", file=sys.stderr)
         return EXIT_ERROR
 
     try:
         return args.func(args)
-    except SemrailError as exc:
-        print(f"semrail: {exc}", file=sys.stderr)
+    except RelscribeError as exc:
+        print(f"relscribe: {exc}", file=sys.stderr)
         return exc.code
     except (gitutil.GitError, units.ConfigError) as exc:
-        print(f"semrail: {exc}", file=sys.stderr)
+        print(f"relscribe: {exc}", file=sys.stderr)
         return EXIT_ERROR

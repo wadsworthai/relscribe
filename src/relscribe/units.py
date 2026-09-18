@@ -1,4 +1,4 @@
-"""Units: discovery, semrail.toml, and reading and writing versions (docs/design.md, Units)."""
+"""Units: discovery, relscribe.toml, and reading and writing versions (docs/design.md, Units)."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from typing import Any
 
 PACKAGE_JSON = "package.json"
 PYPROJECT = "pyproject.toml"
-CONFIG = "semrail.toml"
+CONFIG = "relscribe.toml"
 
 # Plain X.Y.Z without leading zeros: no pre-releases or build metadata (docs/design.md, Versioning).
 _VERSION = re.compile(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)")
@@ -54,7 +54,7 @@ class Unit:
 
 
 def discover(root: Path) -> list[Unit]:
-    """Find the units under `root`, sorted by path, with their `semrail.toml` settings applied."""
+    """Find the units under `root`, sorted by path, with their `relscribe.toml` settings applied."""
     root = Path(root)
     defaults, per_unit = _load_config(root)
     workspace = _workspace(root)
@@ -238,7 +238,7 @@ def _manifest_version(file: Path, text: str) -> Any:
         return None
 
 
-# semrail.toml
+# relscribe.toml
 
 
 def _load_config(root: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
