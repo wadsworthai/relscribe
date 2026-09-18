@@ -9,3 +9,4 @@
 | T005 | Write changelogs and add release | [T005](T005-write-changelogs-and-add-release.md) |
 | T006 | Tag merged releases | [T006](T006-tag-merged-releases.md) |
 | T008 | Rename the tool from semrail to relscribe | [T008](T008-rename-the-tool-from-semrail-to-verstamp.md) |
+| T009 | Add a dry run to tag | [T009](T009-add-a-dry-run-to-tag.md) |
