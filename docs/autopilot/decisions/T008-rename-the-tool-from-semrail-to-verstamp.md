@@ -36,3 +36,9 @@ The lane's first `sed` ran in the main checkout by mistake. The lane restored th
 | 1 | Approve the change set | approve · change | **approve** | It matches the approved scope under the new name, verified above. |
 | 2 | Skip the docs stage | skip · look further | as recommended (skip, recorded) | The docs were updated in the implement stage. The gate is conditional. |
 | 3 | Note the one-time `uv sync` in `docs/development.md` | no · add a line | as recommended (no) | Nothing was released, and it is a one-time local step. |
+
+## close
+
+| # | Question | Options | Decision | Reason |
+|---|---|---|---|---|
+| 1 | The artifact is named `…-relscribe.md`, but taskrail truncates the slug to 40 characters and expects `…-relscrib.md`, so the PR body would link to a missing file | move to taskrail's path · keep and fix the PR body by hand · leave | **move to taskrail's path** | Decision 6 at the scope gate chose the untruncated name. The orchestrator corrects that so the artifact field and the PR link point to a real file. |
