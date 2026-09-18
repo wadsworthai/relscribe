@@ -15,7 +15,7 @@ semrail reads the [Conventional Commits](https://www.conventionalcommits.org/) h
 | `feat!: …`, or any type with a `BREAKING CHANGE:` footer | MAJOR |
 | any other type (`docs`, `chore`, `refactor`, …) | none |
 
-<!-- TODO: document the rule for versions before 1.0.0 once DESIGN.md defines it. -->
+<!-- TODO: document the rule for versions before 1.0.0 once docs/design.md defines it. -->
 
 ## Requirements
 
@@ -62,13 +62,11 @@ uv run pytest tests/test_x.py -k some_case  # a single test
 uv run semrail --root <repo> <command>      # run against another repository
 ```
 
-See [DESIGN.md](DESIGN.md) for the full model and [CLAUDE.md](CLAUDE.md) for contributor conventions.
+See [docs/design.md](docs/design.md) for the full model and [docs/development.md](docs/development.md) for contributor conventions.
 
 ## Releasing
 
-1. In a PR: set the version in `pyproject.toml`, run `uv lock`, and rename `## Unreleased` to `## X.Y.Z` in `CHANGELOG.md`.
-2. After the squash merge: `git tag -a vX.Y.Z <merge commit> -m "semrail X.Y.Z"` and push the tag. Published tags never move.
-3. Verify a clean install from the tag, then bump `main` to the next `.dev0`.
+See [docs/releasing.md](docs/releasing.md).
 
 ## License
 

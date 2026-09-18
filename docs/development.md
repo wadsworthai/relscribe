@@ -1,0 +1,25 @@
+# Development
+
+## Dependencies and tooling
+
+- No runtime dependencies: stdlib only, so the CLI runs anywhere through `uvx`.
+- Build backend: `uv_build`. The single console script is declared in `[project.scripts]`.
+- No linter or formatter is configured, and the test suite is the quality gate. Adding one is a deliberate decision.
+
+## Code style
+
+- Put `from __future__ import annotations` in every module, and type hints on public functions.
+- Prefix private helpers with `_`.
+- Give each module a short docstring stating its job.
+- Comments explain why and cite `docs/design.md` sections where relevant.
+
+## Tests
+
+- Run the CLI end-to-end against temporary git repos, and assert on exit codes and `--json` output, not on internals.
+- Use one test file per feature, named after it.
+- A bug fix comes with a regression test that was seen failing first.
+- `tests/test_docs.py` (planned, added with `pyproject.toml`) checks two things: that CLAUDE.md and AGENTS.md differ only in their header, and that every `docs/**/*.md` appears in the Documentation map.
+
+## Public repository
+
+Consumers may be private. Never commit internal hostnames, private URLs or paths, client or employer names, ticket IDs from real projects, or real sample data. Generalize a need that comes from a consumer before committing it.
