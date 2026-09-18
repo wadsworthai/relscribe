@@ -157,3 +157,31 @@ Plan approved with every question as recommended; see `docs/autopilot/decisions/
 | 12 | `test_bad_ranges_are_usage_errors` (5 cases), `test_unknown_revision_is_a_git_error`, `test_range_is_required` |
 | 13 | `test_text_output`, `test_text_output_with_nothing_to_tag`, `test_text_output_for_a_rejected_push` |
 | 14 | `test_shallow_clone_warns` |
+
+## Verify
+
+I verified the feature with a script under the session scratchpad (not committed). A developer clone pushed to a local bare `origin`. Each CI run was a fresh full clone of `origin` running `uv run semrail --root <clone> [--json] tag <before>..<after> --push origin`, with the range of the push. The repository was a pnpm workspace with `apps/api`, `apps/web` and `packages/core`. Its history started with non-conventional subjects and an untagged `Release core 1.0.0` (0.9.0 -> 1.0.0) from before semrail.
+
+1. **Squash-merged release of two units.** Release commit `78521e8`: `created @scope/api@0.35.0` and `created @scope/web@1.3.0` on that commit. Reconcile also gave `created @scope/core@1.0.0` on the untagged release from before semrail (`3930cfb`). All three were pushed; exit 0.
+2. **Re-run of the same push.** All three were `existing`, `pushed: []`; exit 0.
+3. **Skipped CI run.** `web` was released in `3ad798e` with no CI run, then a docs-only push. The next run reconciled `created @scope/web@1.3.1` on `3ad798e`, and pushed it.
+4. **True merge.** A `release/core` branch (`5754673`, core 1.0.0 -> 1.1.0) was merged with `--no-ff` as `c8acb56`. `@scope/core@1.1.0` was created on `5754673`, not on the merge. `apps/mobile`, introduced at 0.1.0 in the same push, got no tag.
+5. **Conflict.** A hand-made `@scope/api@0.36.0` sat on `c8acb56`, and the release commit `ec357d3` released api 0.36.0 and core 1.1.1. Text output:
+   ```
+   existing @scope/api@0.35.0 78521e8
+   existing @scope/web@1.3.1 3ad798e
+   existing @scope/core@1.1.0 5754673
+   conflict @scope/api@0.36.0 ec357d3: already on c8acb56
+   created @scope/core@1.1.1 ec357d3
+   pushed 1 tag to origin
+   ```
+   Exit 4. The hand-made tag was not moved.
+6. **Remote rejection.** `@scope/web@1.4.0` landed on `origin` (on `ec357d3`) after the CI clone fetched. The run created it locally on `d932755` and reported `pushed 0 tags to origin` / `rejected by origin: @scope/web@1.4.0`; exit 4. The same run also repeated api's reconcile conflict from step 5, as planned (question 5): it stays until api's next release.
+7. **Errors.**
+   - `tag main`: `semrail: tag: the range must be <from>..<to>, got 'main'`, exit 2.
+   - `nope..HEAD`: `semrail: git rev-parse --verify --end-of-options nope^{commit}: fatal: Needed a single revision`, exit 2.
+   - `--push nowhere`: exit 4, not 2. That run created nothing, so nothing was pushed and the unknown remote was never contacted. The 4 came from api's reconcile conflict. This matches the plan ("Nothing is pushed when nothing was created").
+- **Tags on `origin`.** Every tag semrail created is annotated, with the message `<name> <version>` (for example `@scope/core 1.0.0`).
+- **Timing.** Each run took 0.18–0.33 s, including `uv` startup.
+
+The behaviour matches the plan.
