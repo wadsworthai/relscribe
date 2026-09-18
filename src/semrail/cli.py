@@ -5,11 +5,12 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 
-from semrail import commits, gitutil, history, units
+from semrail import changelog, commits, gitutil, history, units
 
 # Exit codes, docs/design.md (CLI).
 EXIT_OK = 0
@@ -50,6 +51,10 @@ def _build_parser() -> argparse.ArgumentParser:
     lint.set_defaults(func=cmd_lint)
     status = sub.add_parser("status", parents=[common], help="report each unit's base, commits and next version")
     status.set_defaults(func=cmd_status)
+    release = sub.add_parser("release", parents=[common], help="write the next versions and changelogs")
+    release.add_argument("--commit", action="store_true", help="make the release commit")
+    release.add_argument("--branch", action="store_true", help="first create release/<YYYY-MM-DD>[-N]")
+    release.set_defaults(func=cmd_release)
     return parser
 
 
@@ -125,6 +130,120 @@ def _status_text(s: history.UnitStatus) -> str:
     lines += [f"  {e.sha[:7]} {e.subject}" for e, _ in s.commits]
     lines += [f"  warning: {w}" for w in s.warnings]
     return "\n".join(lines)
+
+
+def cmd_release(args: argparse.Namespace) -> int:
+    root = _root(args)
+    # On a dirty tree a second run would count the same commits again and release twice.
+    if gitutil.git(root, "status", "--porcelain", "--untracked-files=no").strip():
+        raise SemrailError("release: tracked files have uncommitted changes; commit or stash them first")
+    released = [s for s in history.status(root, units.discover(root)) if s.next]
+    if not released:
+        _emit(args, {"units": [], "files": [], "branch": None, "commit": None}, "nothing to release")
+        return EXIT_OK
+
+    date = _today()
+    changelogs: dict[Path, str] = {}
+    for s in released:
+        if not s.unit.changelog:
+            continue
+        path = root / s.unit.path / changelog.FILE
+        text = _read_or_none(path)
+        if text is not None and changelog.has_version(text, s.next):
+            raise SemrailError(f"release: {_rel(root, path)} already has a section for {s.next}")
+        entry = changelog.section(s.next, date, s.commits, {**commits.DEFAULT_BUMPS, **s.unit.bump})
+        changelogs[path] = changelog.insert(text, entry)
+
+    # All files or none: record every file the release may touch, and restore them on failure.
+    originals = {p: _read_or_none(p) for s in released for p in _release_paths(root, s.unit)}
+    files: list[str] = []
+    branch = None
+    try:
+        for s in released:
+            files += units.write_version(root, s.unit, s.next)
+            path = root / s.unit.path / changelog.FILE
+            if path in changelogs:
+                with path.open("w", encoding="utf-8", newline="") as f:
+                    f.write(changelogs[path])
+                files.append(_rel(root, path))
+        files = list(dict.fromkeys(files))
+        if args.branch:
+            branch = _release_branch(root, date)
+            gitutil.git(root, "switch", "-q", "-c", branch)
+    except Exception:
+        _restore(originals)
+        raise
+
+    sha = None
+    subject = "chore(release): " + ", ".join(f"{s.unit.name} {s.unit.version} -> {s.next}" for s in released)
+    if args.commit:
+        gitutil.git(root, "add", "--", *files)
+        gitutil.git(root, "commit", "-q", "-m", subject)
+        sha = gitutil.git(root, "rev-parse", "HEAD").strip()
+
+    data = {
+        "units": [
+            {"path": s.unit.path, "name": s.unit.name, "version": s.unit.version, "next": s.next, "bump": s.bump,
+             "warnings": s.warnings}
+            for s in released
+        ],
+        "files": files,
+        "branch": branch,
+        "commit": sha,
+    }
+    lines = []
+    for s in released:
+        lines.append(f"{s.unit.name} ({s.unit.path}): {s.unit.version} -> {s.next} ({s.bump})")
+        lines += [f"  warning: {w}" for w in s.warnings]
+    lines += [f"wrote {f}" for f in files]
+    if branch:
+        lines.append(f"branch {branch}")
+    if sha:
+        lines.append(f"commit {sha[:7]} {subject}")
+    _emit(args, data, "\n".join(lines))
+    return EXIT_OK
+
+
+def _today() -> str:
+    """The release date, in UTC so every machine agrees (docs/design.md, Changelog)."""
+    return datetime.now(timezone.utc).date().isoformat()
+
+
+def _release_branch(root: Path, date: str) -> str:
+    """`release/<date>`, or the first free `release/<date>-N` among local and remote-tracking branches."""
+    refs = gitutil.git(root, "for-each-ref", "--format=%(refname)", "refs/heads/", "refs/remotes/").split()
+    taken = {r.removeprefix("refs/heads/") for r in refs if r.startswith("refs/heads/")}
+    taken |= {r.split("/", 3)[3] for r in refs if r.startswith("refs/remotes/") and r.count("/") >= 3}
+    name, n = f"release/{date}", 1
+    while name in taken:
+        n += 1
+        name = f"release/{date}-{n}"
+    return name
+
+
+def _release_paths(root: Path, unit: units.Unit) -> list[Path]:
+    base = root / unit.path
+    return [base / unit.manifest, *(base / s.file for s in unit.sync), base / changelog.FILE]
+
+
+def _read_or_none(path: Path) -> str | None:
+    if not path.is_file():
+        return None
+    with path.open(encoding="utf-8", newline="") as f:
+        return f.read()
+
+
+def _restore(originals: dict[Path, str | None]) -> None:
+    for path, text in originals.items():
+        if text is None:
+            path.unlink(missing_ok=True)
+        else:
+            with path.open("w", encoding="utf-8", newline="") as f:
+                f.write(text)
+
+
+def _rel(root: Path, path: Path) -> str:
+    return path.relative_to(root).as_posix()
 
 
 def main(argv: list[str] | None = None) -> int:
