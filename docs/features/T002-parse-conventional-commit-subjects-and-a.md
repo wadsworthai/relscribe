@@ -31,7 +31,7 @@ Governing spec: `docs/design.md`, sections Versioning, Commit parsing and CLI (t
 
 ### Output
 
-Text: one line per invalid subject, `invalid: <subject>` (prefixed with the short SHA for a commit from `--range`), then a summary, `<n> of <m> subjects invalid` or `<m> subjects valid`.
+Text: one line per invalid subject, `invalid: <subject>` (prefixed with the short SHA for a commit from `--range`), then a summary, `<n> of <m> subjects invalid` or `<m> subjects valid`, with `subject` in the singular when `<m>` is 1 (`1 subject valid`, `1 of 1 subject invalid`).
 
 `--json`:
 
@@ -91,7 +91,7 @@ Written before the code. The first run failed: `tests/test_lint.py` had 15 failu
 
 | Criterion | Tests |
 |---|---|
-| 1 | `test_lint.py`: `test_valid_subject`, `test_invalid_subject`, `test_one_invalid_among_several` |
+| 1 | `test_lint.py`: `test_valid_subject`, `test_invalid_subject`, `test_one_invalid_among_several`, `test_summary_counts_subjects` |
 | 2 | `test_commits.py`: `test_parses` (8 cases) |
 | 3 | `test_commits.py`: `test_rejects` (10 cases, including a multi-line subject) |
 | 4 | `test_commits.py`: `test_breaking_footer`, `test_lowercase_footer_is_not_breaking`, `test_footer_on_unparseable_subject_yields_nothing` |

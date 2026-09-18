@@ -76,7 +76,8 @@ def cmd_lint(args: argparse.Namespace) -> int:
     results = [{"sha": sha, "subject": s, "valid": commits.parse(s) is not None} for sha, s in checked]
     invalid = [r for r in results if not r["valid"]]
     lines = [f"{r['sha'][:7]} invalid: {r['subject']}" if r["sha"] else f"invalid: {r['subject']}" for r in invalid]
-    lines.append(f"{len(invalid)} of {len(results)} subjects invalid" if invalid else f"{len(results)} subjects valid")
+    noun = "subject" if len(results) == 1 else "subjects"
+    lines.append(f"{len(invalid)} of {len(results)} {noun} invalid" if invalid else f"{len(results)} {noun} valid")
     _emit(args, {"valid": not invalid, "subjects": results}, "\n".join(lines))
     return EXIT_FAILED if invalid else EXIT_OK
 

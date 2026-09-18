@@ -8,7 +8,20 @@ import pytest
 def test_valid_subject(cli):
     result = cli("lint", "feat: x")
     assert result.code == 0
-    assert "1 subjects valid" in result.out
+    assert result.out.splitlines()[-1] == "1 subject valid"
+
+
+@pytest.mark.parametrize(
+    ("subjects", "summary"),
+    [
+        (["feat: x"], "1 subject valid"),
+        (["feat: x", "fix: y"], "2 subjects valid"),
+        (["oops"], "1 of 1 subject invalid"),
+        (["oops", "fix: y"], "1 of 2 subjects invalid"),
+    ],
+)
+def test_summary_counts_subjects(cli, subjects, summary):
+    assert cli("lint", *subjects).out.splitlines()[-1] == summary
 
 
 def test_invalid_subject(cli):
