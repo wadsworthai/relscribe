@@ -109,3 +109,19 @@ Written before the code. The first run failed: `tests/test_lint.py` had 15 failu
 
 - Parentheses inside a scope (`feat(a(b)): x`) do not parse. The spec calls the scope free text but gives only `:` as an example; forbidding parentheses keeps a trailing `(#82)` unambiguous.
 - `Revert "…"`, `fixup! …` and `Merge …` subjects fail lint. A repository that keeps them in its history gets lint failures on `--range`; merges are excluded, the other two are real non-conforming subjects.
+
+## Verification
+
+The installed CLI was run with `uv run --project <worktree> semrail …` from a directory outside any git repository. Every result matched the plan:
+
+| Command | Output | Exit |
+|---|---|---|
+| `lint "feat(0037:api:session): add a read (#T054)"` | `1 subject valid` | 0 |
+| `lint oops` | `invalid: oops`, `1 of 1 subject invalid` | 1 |
+| `lint --json "Feat!: x" "feat(): x"` | `valid: false`; the first subject valid, the second invalid, both with `sha: null` | 1 |
+| `lint` | `semrail: lint: give at least one <subject> or --range <from>..<to>` | 2 |
+| `--root <worktree> lint --range b435027..HEAD` | `6 subjects valid` | 0 |
+| `--root <worktree> --json lint --range HEAD~1..HEAD` | one entry with the full SHA of the head commit, valid | 0 |
+| `--root <worktree> lint --range 9e51331..HEAD` | `16 subjects valid` | 0 |
+| `--root <worktree> lint --range HEAD` | `semrail: lint: --range must be <from>..<to>, got 'HEAD'` | 2 |
+| `lint --range b435027..HEAD` outside a repository | `semrail: git rev-parse --show-toplevel: fatal: not a git repository …` | 2 |
