@@ -121,3 +121,7 @@ All approved; see `docs/autopilot/decisions/T008-rename-the-tool-from-semrail-to
   - `docs/features/T002…T006-*`.
 - `taskrail validate`: `8 task(s) in 1 backlog(s): 0 error(s), 0 warning(s)`.
 - `taskrail checks T008 --stage implement`: `test` (`uv run pytest`) passed, 255 tests, the same as the baseline. `lint` is not configured.
+
+## Docs stage
+
+Skipped, as approved. The implement stage already updated every doc the rename affects: the README, `docs/design.md`, `docs/releasing.md`, CLAUDE.md and AGENTS.md. A `uv sync` note for existing checkouts is not added, because nothing was released and it is a one-time local step. No follow-up tasks were opened.
