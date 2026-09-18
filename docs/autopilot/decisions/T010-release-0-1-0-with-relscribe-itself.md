@@ -20,3 +20,12 @@ Constraint accepted: if `main` moves before this PR merges, the release commit i
 Reviewed: release commit 8c8ffd0, made by relscribe itself. It touches exactly `pyproject.toml` and `uv.lock` (0.0.0 → 0.1.0, relscribe entry only) and a new `CHANGELOG.md` listing the six `feat` commits from T002 to T009 under Added. `uv lock --check` passes. `status` afterwards reports "0.1.0, no release". `tag --dry-run origin/main..HEAD` predicts exactly one tag, `v0.1.0 would-create` on the release commit. `taskrail checks T010` re-run: 265 passed. There are no tags locally or on the remote.
 
 No decisions were needed. The stage is approved.
+
+## close
+
+| # | Question | Options | Decision | Reason |
+|---|---|---|---|---|
+| 1 | "Current state" in CLAUDE.md/AGENTS.md now says 0.1.0 is released (not in the approved change set) | keep · drop | **keep** | The line is true once this PR is merged and CI tags it. The alternative leaves it false on `main` from that moment. The two files stay identical. |
+| 2 | T010's row still says `release --branch --commit` | leave · `edit --force` | **leave** | The task record documents the approved deviation, and the row is a historical description of a done task. |
+
+`origin/main` has not moved since b97e6c2, so the release commit does not need regenerating.
