@@ -14,3 +14,9 @@ Reviewed: `docs/chores/T010-release-0-1-0-with-relscribe-itself.md` at 025220a (
 | 3 | Sentence in `docs/releasing.md` | yes · no | as recommended (yes) | Without it, this merge contradicts "Task branches never change the version". Keep it to one or two sentences. |
 
 Constraint accepted: if `main` moves before this PR merges, the release commit is dropped and regenerated on the new `main`, never rebased. The orchestrator handles this at hand-off.
+
+## implement gate
+
+Reviewed: release commit 8c8ffd0, made by relscribe itself. It touches exactly `pyproject.toml` and `uv.lock` (0.0.0 → 0.1.0, relscribe entry only) and a new `CHANGELOG.md` listing the six `feat` commits from T002 to T009 under Added. `uv lock --check` passes. `status` afterwards reports "0.1.0, no release". `tag --dry-run origin/main..HEAD` predicts exactly one tag, `v0.1.0 would-create` on the release commit. `taskrail checks T010` re-run: 265 passed. There are no tags locally or on the remote.
+
+No decisions were needed. The stage is approved.
