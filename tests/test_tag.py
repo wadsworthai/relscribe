@@ -1,4 +1,4 @@
-"""`relscribe tag`: release detection, annotated tags, reconcile, conflicts and --push.
+"""`relscribe tag`: release detection, annotated tags, reconcile, conflicts, --push and --dry-run.
 
 docs/design.md, Releases and tags and CLI.
 """
@@ -65,6 +65,7 @@ def test_version_raise_is_tagged_with_an_annotated_tag(cli, repo):
                 "sha": release,
                 "result": "created",
                 "existing_sha": None,
+                "reconciled": False,
             }
         ],
         "push": None,
@@ -238,6 +239,7 @@ def test_tag_on_another_commit_is_a_conflict_and_other_tags_are_still_created(cl
         "sha": release,
         "result": "conflict",
         "existing_sha": init,
+        "reconciled": False,
     }
     assert results(data)[1] == ("@s/web@1.1.0", release, "created")
     assert tag_commit(repo, "@s/api@1.1.0") == init
@@ -423,7 +425,7 @@ def test_text_output(cli, repo, remote):
     result = cli("--root", str(repo.path), "tag", f"{web_old}..HEAD", "--push", "origin")
     assert result.code == 4
     assert result.out.splitlines() == [
-        f"existing @s/web@1.0.1 {web_old[:7]}",
+        f"existing @s/web@1.0.1 {web_old[:7]} (reconciled)",
         f"conflict @s/api@1.1.0 {release[:7]}: already on {init[:7]}",
         f"created @s/web@1.1.0 {release[:7]}",
         "pushed 1 tag to origin",
@@ -464,3 +466,138 @@ def test_shallow_clone_warns(cli, repo, tmp_path):
     result = cli("--root", str(clone), "--json", "tag", "HEAD~1..HEAD")
     assert result.code == 0, result.err
     assert result.json()["warnings"] == ["shallow clone: history may be incomplete; fetch full history and tags"]
+
+
+# Dry run and the reconciled flag (T009)
+
+
+def reconciled(data: dict) -> list[tuple[str, bool]]:
+    return [(t["tag"], t["reconciled"]) for t in data["tags"]]
+
+
+def test_dry_run_reports_would_create_and_creates_nothing(cli, repo):
+    repo.commit("chore: init", {"package.json": pkg("app", "1.0.0")})
+    skipped = repo.commit("chore(release): 1.1.0", {"package.json": pkg("app", "1.1.0")})
+    before = repo.commit("docs: x", {"README.md": "x\n"})
+    release = repo.commit("chore(release): 1.2.0", {"package.json": pkg("app", "1.2.0")})
+
+    dry = tag(cli, repo, f"{before}..HEAD", "--dry-run")
+    assert results(dry) == [("app@1.1.0", skipped, "would-create"), ("app@1.2.0", release, "would-create")]
+    assert dry["push"] is None
+    assert tags(repo) == []
+
+    real = tag(cli, repo, f"{before}..HEAD")
+    for t in dry["tags"]:
+        t["result"] = "created"
+    assert real == dry
+
+
+def test_dry_run_reports_existing_and_conflict_and_exits_4(cli, repo):
+    init = repo.commit(
+        "chore: init",
+        {**WORKSPACE, "apps/api/package.json": pkg("@s/api", "1.0.0"), "apps/web/package.json": pkg("@s/web", "1.0.0")},
+    )
+    repo.git("tag", "-a", "-m", "wrong", "@s/api@1.1.0", init)
+    release = repo.commit(
+        "chore(release): both",
+        {"apps/api/package.json": pkg("@s/api", "1.1.0"), "apps/web/package.json": pkg("@s/web", "1.1.0")},
+    )
+    repo.git("tag", "-a", "-m", "@s/web 1.1.0", "@s/web@1.1.0", release)
+
+    data = tag(cli, repo, f"{init}..HEAD", "--dry-run", code=4)
+    assert results(data) == [("@s/api@1.1.0", release, "conflict"), ("@s/web@1.1.0", release, "existing")]
+    assert data["tags"][0]["existing_sha"] == init
+    assert tag_commit(repo, "@s/api@1.1.0") == init
+
+
+def test_dry_run_same_tag_twice_conflicts_with_the_first(cli, repo):
+    init = repo.commit("chore: init", {"package.json": pkg("app", "1.0.0")})
+    first = repo.commit("chore(release): 1.1.0", {"package.json": pkg("app", "1.1.0")})
+    repo.commit("revert", {"package.json": pkg("app", "1.0.0")})
+    again = repo.commit("chore(release): 1.1.0 again", {"package.json": pkg("app", "1.1.0")})
+    data = tag(cli, repo, f"{init}..HEAD", "--dry-run", code=4)
+    assert results(data) == [("app@1.1.0", first, "would-create"), ("app@1.1.0", again, "conflict")]
+    assert data["tags"][1]["existing_sha"] == first
+    assert tags(repo) == []
+
+
+def test_dry_run_with_push_is_a_usage_error(cli, repo, remote):
+    init = repo.commit("chore: init", {"package.json": pkg("app", "1.0.0")})
+    repo.commit("chore(release): 1.1.0", {"package.json": pkg("app", "1.1.0")})
+    result = cli("--root", str(repo.path), "tag", f"{init}..HEAD", "--dry-run", "--push", "origin")
+    assert result.code == 2
+    assert result.err == "relscribe: tag: --dry-run and --push cannot be combined\n"
+    assert result.out == ""
+    assert tags(repo) == []
+    assert remote_tags(remote) == {}
+
+
+@pytest.mark.parametrize("dry", [False, True])
+def test_entries_say_whether_they_were_reconciled(cli, repo, dry):
+    repo.commit("chore: init", {"package.json": pkg("app", "1.0.0")})
+    repo.commit("chore(release): 1.1.0", {"package.json": pkg("app", "1.1.0")})
+    before = repo.commit("docs: x", {"README.md": "x\n"})
+    repo.commit("chore(release): 1.2.0", {"package.json": pkg("app", "1.2.0")})
+    args = ["--dry-run"] if dry else []
+    assert reconciled(tag(cli, repo, f"{before}..HEAD", *args)) == [("app@1.1.0", True), ("app@1.2.0", False)]
+
+
+def test_query_whether_a_commit_is_a_release(cli, repo):
+    repo.commit(
+        "chore: init",
+        {**WORKSPACE, "apps/api/package.json": pkg("@s/api", "1.0.0"), "apps/web/package.json": pkg("@s/web", "1.0.0")},
+    )
+    repo.commit("chore(release): api", {"apps/api/package.json": pkg("@s/api", "1.0.1")})
+    release = repo.commit(
+        "chore(release): both",
+        {"apps/api/package.json": pkg("@s/api", "1.1.0"), "apps/web/package.json": pkg("@s/web", "1.1.0")},
+    )
+    docs = repo.commit("docs: x", {"README.md": "x\n"})
+
+    data = tag(cli, repo, f"{release}^..{release}", "--dry-run")
+    assert reconciled(data) == [("@s/api@1.0.1", True), ("@s/api@1.1.0", False), ("@s/web@1.1.0", False)]
+    assert [t["sha"] for t in data["tags"] if not t["reconciled"]] == [release, release]
+
+    data = tag(cli, repo, f"{docs}^..{docs}", "--dry-run")
+    assert [t for t in data["tags"] if not t["reconciled"]] == []
+    assert tags(repo) == []
+
+
+def test_query_the_units_a_release_branch_releases(cli, repo):
+    repo.commit(
+        "chore: init",
+        {**WORKSPACE, "apps/api/package.json": pkg("@s/api", "1.0.0"), "apps/web/package.json": pkg("@s/web", "1.0.0")},
+    )
+    repo.git("switch", "-q", "-c", "release/2026-09-18")
+    repo.commit("feat(api): x", {"apps/api/x.txt": "x\n"})
+    release = repo.commit("chore(release): @s/api 1.0.0 -> 1.1.0", {"apps/api/package.json": pkg("@s/api", "1.1.0")})
+
+    data = tag(cli, repo, "main..release/2026-09-18", "--dry-run")
+    assert results(data) == [("@s/api@1.1.0", release, "would-create")]
+    assert reconciled(data) == [("@s/api@1.1.0", False)]
+
+
+def test_dry_run_needs_no_committer_identity(cli, repo, monkeypatch):
+    init = repo.commit("chore: init", {"package.json": pkg("app", "1.0.0")})
+    release = repo.commit("chore(release): 1.1.0", {"package.json": pkg("app", "1.1.0")})
+    repo.git("config", "user.useConfigOnly", "true")
+    for name in ("GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL", "EMAIL"):
+        monkeypatch.delenv(name, raising=False)
+
+    assert results(tag(cli, repo, f"{init}..HEAD", "--dry-run")) == [("app@1.1.0", release, "would-create")]
+    assert cli("--root", str(repo.path), "tag", f"{init}..HEAD").code == 2
+    assert tags(repo) == []
+
+
+def test_dry_run_text_output(cli, repo):
+    repo.commit("chore: init", {"package.json": pkg("app", "1.0.0")})
+    skipped = repo.commit("chore(release): 1.1.0", {"package.json": pkg("app", "1.1.0")})
+    repo.git("tag", "-a", "-m", "app 1.1.0", "app@1.1.0")
+    before = repo.commit("docs: x", {"README.md": "x\n"})
+    release = repo.commit("chore(release): 1.2.0", {"package.json": pkg("app", "1.2.0")})
+    result = cli("--root", str(repo.path), "tag", f"{before}..HEAD", "--dry-run")
+    assert result.code == 0, result.err
+    assert result.out.splitlines() == [
+        f"existing app@1.1.0 {skipped[:7]} (reconciled)",
+        f"would-create app@1.2.0 {release[:7]}",
+    ]

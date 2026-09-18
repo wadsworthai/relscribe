@@ -92,3 +92,27 @@ All through the CLI against real temporary repositories (`tests/test_tag.py`).
 5. **Text wording.** Recommend the existing one-line-per-tag format with `would-create` as the result word and `(reconciled)` appended, no extra summary line. Alternative: a leading `dry run: no tags created` line.
 - **Risk:** adding `reconciled` to every entry changes the JSON of real runs. It is an added key, so readers that select keys keep working; the only exact-equality readers are this repository's tests.
 - **Prior work:** `taskrail show` lists the branch `T009-add-a-dry-run-to-tag` as prior work (`prepared: null`); it holds only the orchestrator's backlog commit `e3f935b` on top of `origin/main`, no earlier work.
+
+## Decisions
+
+Plan approved with every question as recommended; see `docs/autopilot/decisions/T009-add-a-dry-run-to-tag.md`. The result is `would-create`. `--dry-run --push` is exit 2. A conflict under `--dry-run` is exit 4. Every entry has `reconciled`, in real runs too. The text keeps its format and appends ` (reconciled)`.
+
+## Implementation
+
+- Test first: with the new and updated tests in `tests/test_tag.py` and no code change, `uv run pytest -q --tb=line` gave `13 failed, 252 passed`. The 10 new tests using `--dry-run` failed with `unrecognized arguments: --dry-run`, the parametrized `reconciled` test's real-run case failed with `KeyError: 'reconciled'`, and the three updated tests (two exact JSON entries and the text output) failed on the missing `reconciled` key and ` (reconciled)` suffix.
+- `src/relscribe/tags.py`: `run(..., dry_run=False)`. `TagResult` gains `reconciled`. `_tag` takes `reconciled` and `planned`, a dict of the tags a dry run would create (`None` in a real run). A tag found neither in the repository nor in `planned` is recorded there and reported as `would-create`, so a later release of the same tag in the run is a conflict against it, as in a real run.
+- `src/relscribe/cli.py`: `--dry-run` on `tag`; `cmd_tag` rejects it with `--push` before touching the repository; `reconciled` in `_tag_json`; ` (reconciled)` in `_tag_text`.
+- `docs/design.md`: a "Dry run" bullet under Releases and tags, the `tag` row, and the `tag --json` paragraph.
+
+## Acceptance criteria → tests (`tests/test_tag.py`)
+
+| AC | Tests |
+|---|---|
+| 1 | `test_dry_run_reports_would_create_and_creates_nothing` |
+| 2 | `test_dry_run_reports_existing_and_conflict_and_exits_4` |
+| 3 | `test_dry_run_same_tag_twice_conflicts_with_the_first` |
+| 4 | `test_dry_run_with_push_is_a_usage_error` |
+| 5 | `test_entries_say_whether_they_were_reconciled` (real and dry), `test_version_raise_is_tagged_with_an_annotated_tag`, `test_tag_on_another_commit_is_a_conflict_and_other_tags_are_still_created` |
+| 6 | `test_query_whether_a_commit_is_a_release`, `test_query_the_units_a_release_branch_releases` |
+| 7 | `test_dry_run_needs_no_committer_identity` |
+| 8 | `test_dry_run_text_output`, `test_text_output` (` (reconciled)` in a real run) |

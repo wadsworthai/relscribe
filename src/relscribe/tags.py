@@ -27,8 +27,9 @@ class Release:
 class TagResult:
     tag: str
     release: Release
-    result: str  # "created", "existing" or "conflict"
+    result: str  # "created", "would-create" (dry run), "existing" or "conflict"
     existing_sha: str | None  # the commit the tag points to, for "conflict" only
+    reconciled: bool  # found by reconcile, before the range
 
 
 @dataclass(frozen=True)
@@ -49,14 +50,20 @@ class Outcome:
         return any(t.result == "conflict" for t in self.tags) or bool(self.push and self.push.rejected)
 
 
-def run(root: Path, from_rev: str, to_rev: str, remote: str | None = None) -> Outcome:
-    """Tag every release in `from_rev..to_rev` and each unit's latest release reachable from `from_rev`."""
+def run(root: Path, from_rev: str, to_rev: str, remote: str | None = None, dry_run: bool = False) -> Outcome:
+    """Tag every release in `from_rev..to_rev` and each unit's latest release reachable from `from_rev`.
+
+    With `dry_run`, no tag is created and each one that would be is reported as "would-create".
+    """
     from_sha = _commit(root, from_rev)
     to_sha = _commit(root, to_rev)
     snapshots: dict[str, list[Unit]] = {}
-    releases = _reconcile(root, from_sha, snapshots) + _in_range(root, from_sha, to_sha, snapshots)
+    reconciled = _reconcile(root, from_sha, snapshots)
+    in_range = _in_range(root, from_sha, to_sha, snapshots)
 
-    results = [_tag(root, r) for r in releases]
+    # Tags a dry run would have created, so a later release of the same tag conflicts as in a real run.
+    planned: dict[str, str] | None = {} if dry_run else None
+    results = [_tag(root, r, True, planned) for r in reconciled] + [_tag(root, r, False, planned) for r in in_range]
     push = None
     if remote is not None:
         push = _push(root, remote, [t.tag for t in results if t.result == "created"])
@@ -152,17 +159,25 @@ def _units_at(root: Path, sha: str, snapshots: dict[str, list[Unit]]) -> list[Un
     return found
 
 
-def _tag(root: Path, release: Release) -> TagResult:
-    """Create the release's annotated tag unless it exists; a tag on another commit is never moved."""
+def _tag(root: Path, release: Release, reconciled: bool, planned: dict[str, str] | None) -> TagResult:
+    """Create the release's annotated tag unless it exists; a tag on another commit is never moved.
+
+    `planned` is None for a real run; in a dry run it records each tag instead of creating it.
+    """
     unit = release.unit
     name = unit.tag_name(unit.version)
     existing = _commit_of_tag(root, name)
+    if existing is None and planned is not None:
+        existing = planned.get(name)
+    if existing is None and planned is not None:
+        planned[name] = release.sha
+        return TagResult(name, release, "would-create", None, reconciled)
     if existing is None:
         gitutil.git(root, "tag", "-a", "-m", f"{unit.name} {unit.version}", name, release.sha)
-        return TagResult(name, release, "created", None)
+        return TagResult(name, release, "created", None, reconciled)
     if existing == release.sha:
-        return TagResult(name, release, "existing", None)
-    return TagResult(name, release, "conflict", existing)
+        return TagResult(name, release, "existing", None, reconciled)
+    return TagResult(name, release, "conflict", existing, reconciled)
 
 
 def _push(root: Path, remote: str, names: list[str]) -> Push:
