@@ -1,0 +1,26 @@
+# T008 — autopilot decisions
+
+Decisions the orchestrator took on the human's behalf while this task ran in an autopilot lane.
+Each is recorded before it is given to the lane.
+
+## escalated to the human
+
+| # | Question | Options | Decision | Reason |
+|---|---|---|---|---|
+| 1 | Which name, after "verstamp" turned out to be taken on crates.io (an unrelated binary-format crate) and as a GitHub user | keep verstamp · look for a name free everywhere | **look for another name; chose `relscribe`** | The human wants a name with no clashes. `relscribe` is free on PyPI, npm, crates.io, RubyGems and Homebrew, and has no GitHub user or repository of that name (checked 2026-09-18). |
+
+Answered by the human. The task was retitled "Rename the tool from semrail to relscribe", and its unpushed branch was renamed to `T008-rename-the-tool-from-semrail-to-relscribe` with `taskrail branch`. The worktree directory keeps its old path.
+
+## scope gate
+
+Reviewed: `docs/chores/T008-rename-the-tool-from-semrail-to-verstamp.md` at 4027435, and the lane's `git grep` inventory (247 lines in 37 files). Only the artifact and its index row were edited. `taskrail checks T008` passed (255 tests). The change set holds for the new name: every `semrail` becomes `relscribe`, and every `Semrail` becomes `Relscribe`.
+
+| # | Question | Options | Decision | Reason |
+|---|---|---|---|---|
+| 1 | Compatibility shim for the old name | no · read old config · script alias | as recommended (no) | Nothing was released, so no user relies on the old name (YAGNI). |
+| 2 | PR title type | `chore` · `refactor` · breaking | as recommended (`chore`) | No released consumer, and it stays out of the 0.1.0 changelog. |
+| 3 | Epic E01 text | hand-edit the word in 3 places + `taskrail validate` · leave · name only | as recommended | There is no `epic edit` command. Changing one word keeps the table layout, IDs and statuses intact, and `validate` proves the backlog is still valid. |
+| 4 | Done rows T002–T006 | leave · `edit --force` | as recommended (leave) | They are historical records. |
+| 5 | Test names with `semrail_toml` | rename · leave | as recommended (rename) | `git grep` stays clean outside the records. |
+| 6 | Artifact file name (it contains "verstamp") | rename with `git mv` to `…-relscribe.md` and fix its index row · keep | **rename** | The file name should match the task. Do the same for this decision record only if the orchestrator asks; it stays as is. |
+| 7 | Stale "Current state" in CLAUDE.md/AGENTS.md (lists only `lint` and `status`) | fix here · leave to T007 | **fix here** | It's a one-line edit in files this task already rewrites, and it keeps T007 focused on CI and publishing. |
