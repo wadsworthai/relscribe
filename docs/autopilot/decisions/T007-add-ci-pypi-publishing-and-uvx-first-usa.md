@@ -44,3 +44,10 @@ Reviewed: `release.yml` (tag job only, `contents: write`, concurrency, full hist
 | 1 | Backlog text naming PyPI (E01 "Done when", T010 description) | update in this branch · separately | **update in this branch** | The backlog merges with the docs that describe the new release path. Use `taskrail edit` for T010. Change only the words in E01's "Done when" line, then run `taskrail validate`. |
 | 2 | T007 title still names PyPI | retitle · leave | **retitle** to "Add CI, release tagging and uvx-first usage docs" | The title must not describe work that isn't done. The branch name stays. |
 | 3 | Approve the implement stage | approve | **approve** | |
+
+## close
+
+| # | Question | Options | Decision | Reason |
+|---|---|---|---|---|
+| 1 | Retitling changed taskrail's derived artifact path to `…-add-ci-release-tagging-…` | move the record · fix the PR body by hand | **move the record** (`git mv`, index row updated) | `show`, `review` and the PR body then point to a real file. This decision record keeps its name. |
+| 2 | T007's description still says "trusted publishing" | edit with `--force` · leave | **edit** | A closed task must not describe work that was dropped at the human's request. `--force` is needed because the task is done on its branch. |
