@@ -16,20 +16,24 @@ Create the smallest package that later tasks build on: an installable `semrail` 
   - `_root(args) -> Path`: `--root` if given, else the enclosing git repository via `gitutil.toplevel`; called by commands that need a repository, so a command that does not (such as `lint <subject>`) works anywhere;
   - `_emit(args, data, text)`: prints `json.dumps(data)` under `--json`, else `text`;
   - `main(argv=None) -> int`: parses, prints `--version` through `_emit` (`{"version": …}` under `--json`), exits 2 with usage when no command is given, dispatches to `args.func(args)`, and maps `SemrailError` to its code.
-- `src/semrail/gitutil.py` (new): `git(root, *args) -> str` (runs git, raises `SemrailError` with git's stderr on failure) and `toplevel(path) -> Path`. Created now so T002 and T003, which run in parallel, do not both create it.
+- `src/semrail/gitutil.py` (new): `git(root, *args) -> str` (runs git, raises `GitError` with git's stderr on failure) and `toplevel(path) -> Path`. `GitError` lives here rather than reusing `SemrailError` to avoid a circular import with `cli.py`; `main` reports it as `semrail: <message>` with exit code 2. Created now so T002 and T003, which run in parallel, do not both create it.
 - `tests/conftest.py` (new):
   - `repo` fixture: `git init -b main` in `tmp_path` with a fixed identity and git config isolated from the host (`GIT_CONFIG_GLOBAL`/`GIT_CONFIG_SYSTEM` pointed at `/dev/null`), returning an object with `path`, `write(files)` and `commit(subject, files=None, body="") -> sha`;
   - `cli` fixture: runs `semrail.cli.main(argv)` in process with captured output and returns `code`, `out`, `err` and a `json()` accessor.
 - `tests/test_cli.py` (new): smoke tests — `--version` (text and `--json`), no command exits 2, an unknown command exits 2 with a `semrail: error:` message.
-- `tests/test_gitutil.py` (new): `toplevel` finds the repo root from a subdirectory; `git` raises `SemrailError` (code 2) outside a repository. This tests a module directly because no command uses it yet; the tests move to CLI level once a command does.
+- `tests/test_gitutil.py` (new): `toplevel` finds the repo root from a subdirectory; `git` raises `GitError` outside a repository. This tests a module directly because no command uses it yet; the tests move to CLI level once a command does.
 - `tests/test_docs.py` (new): (a) CLAUDE.md and AGENTS.md are identical after their first 3 lines; (b) every top-level `docs/*.md` is referenced in the Documentation map section of CLAUDE.md. Subdirectories (`docs/chores/`, `docs/autopilot/`) hold task records, not product docs, and are excluded.
 - `docs/development.md`: update the `tests/test_docs.py` sentence to match (no longer "planned"; top-level `docs/*.md` only).
 - `.gitignore`: add `.venv/`, `__pycache__/`, `.pytest_cache/`, `dist/`.
 - `CLAUDE.md` and `AGENTS.md` (docs stage): "Current state" no longer says there is no code.
-- `.taskrail/config.toml`: only if decision 2 is approved.
+- `.taskrail/config.toml`: `[checks] test = "uv run pytest"`, no `lint` (decision 2).
+- `README.md` (docs stage): add exit code 4 ("Tag conflict") to the exit-code table, and make the configuration TODO name `semrail.toml` at the repository root instead of `.semrail/config.toml` (decision 5).
 - `docs/chores/README.md` and this file: the task record.
 
 ## Decisions needed
+
+All approved as recommended; see `docs/autopilot/decisions/T001-scaffold-the-package-cli-skeleton-and-te.md`. Decision 5 there adds the two README fixes.
+
 
 1. **Placeholder version.** Recommend `0.0.0`: `docs/design.md` forbids pre-release spelling, and the first `feat` bumps it to `0.1.0`, the planned first release. Alternative: `0.1.0` now, which would make the first release a no-bump or a `0.2.0`.
 2. **Checks.** Recommend adding `test = "uv run pytest"` under `[checks]` in `.taskrail/config.toml`, and no `lint` (no linter by design, `docs/development.md`). Alternative: leave `checks` empty and run pytest by hand in every lane.
@@ -41,11 +45,20 @@ Create the smallest package that later tasks build on: an installable `semrail` 
 - Any subcommand (`status`, `release`, `tag`, `lint`) and the modules `commits.py`, `units.py`, `changelog.py`: T002–T006.
 - A linter or formatter: excluded by `docs/development.md`.
 - `.python-version`: `requires-python` is enough.
-- README fixes: it lists exit codes without 4 and names `.semrail/config.toml` where the design says `semrail.toml`. README usage belongs to T007; noted there rather than fixed here.
+- Any other README change: usage and configuration docs belong to T007.
 - CI: T007.
 
 ## Verification
 
 - `uv lock` and `uv sync` succeed; `uv run semrail --version` prints `0.0.0`; `uv run semrail --json --version` prints `{"version": "0.0.0"}`; `uv run semrail` exits 2.
 - `uv run pytest` passes, and `tests/test_docs.py` is seen failing when AGENTS.md diverges or a `docs/*.md` is missing from the map (checked by a temporary edit, then reverted).
-- `taskrail checks T001` runs pytest if decision 2 is approved.
+- `taskrail checks T001` runs pytest.
+
+### Results (implement stage)
+
+- `uv lock`: resolved 7 packages; `uv sync` installed pytest 9.1.1 and `semrail==0.0.0` (editable).
+- `uv run semrail --version` → `0.0.0`, exit 0. `uv run semrail --json --version` → `{"version": "0.0.0"}`, exit 0. `uv run semrail` → usage plus `semrail: error: a command is required`, exit 2. `uv run semrail bogus` → `semrail: error: argument <command>: invalid choice: 'bogus' (choose from )`, exit 2.
+- Flag positions, probed with a throwaway command registered in a one-off script (not committed): `--json`/`--root` before, after and mixed around the subcommand all reached the command; without `--root` the root was the enclosing repository; outside a repository the command exited 2 with `semrail: git rev-parse --show-toplevel: fatal: not a git repository …`.
+- `uv run pytest -v`: 8 passed. `uv run --isolated --python 3.11 pytest -q`: 8 passed.
+- `tests/test_docs.py` seen failing: with a temporary `docs/zz-probe.md` and a line appended to AGENTS.md, both tests failed (`Right contains one more item: 'drift'`; `not in CLAUDE.md's Documentation map: ['docs/zz-probe.md']`); both passed again after reverting.
+- `taskrail checks T001 --stage implement`: `test` (`uv run pytest`) passed, 8 tests; `lint` not configured.

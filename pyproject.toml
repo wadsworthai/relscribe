@@ -1,0 +1,22 @@
+[project]
+name = "semrail"
+version = "0.0.0"
+description = "Semantic versioning and changelogs from Conventional Commits, for one or more packages per repository."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+semrail = "semrail.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["uv_build>=0.11,<0.12"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
