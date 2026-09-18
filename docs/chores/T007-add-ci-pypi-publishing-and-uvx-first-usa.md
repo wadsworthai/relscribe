@@ -134,5 +134,10 @@ The scope decisions are recorded in `docs/autopilot/decisions/T007-add-ci-pypi-p
   - `relscribe tag HEAD~2..HEAD` created `v0.1.0` there;
   - `uvx --no-cache --from "git+file://$S/sim@v0.1.0" relscribe --version` resolved `v0.1.0` to 4cf5e86, built it and printed `0.1.0`, exit 0;
   - through the same form, `lint "feat(api): add sessions"` gives `1 subject valid`, and `status` gives `0.1.0, no release`, base tag `v0.1.0`.
-- Worktree, read-only, with the committed `relscribe.toml`: see the implement gate report for the `status` and `tag --dry-run origin/main..HEAD` outputs.
-- `taskrail checks T007`: see the implement gate report.
+- Worktree, read-only, with `relscribe.toml` committed (ed7dd38):
+  - `status` gives `relscribe (.): 0.0.0 -> 0.1.0 (minor)`, base whole history, exit 0;
+  - `tag --dry-run origin/main..HEAD` gives `no releases to tag`, exit 0;
+  - `tag --dry-run --json HEAD^..HEAD` gives `{"tags": [], "push": null, "warnings": []}`, exit 0.
+
+  So merging T007 tags nothing. The repository still has no tags.
+- `taskrail checks T007 --stage implement`: test `uv run pytest` gives `265 passed`, and lint is not configured (by design).
