@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from semrail.units import ConfigError, Unit, discover, write_version
+from semrail.units import ConfigError, NoUnitError, Unit, discover, write_version
 
 
 def pkg(name: str | None, version: str | None = None, **extra: object) -> str:
@@ -143,6 +143,21 @@ def test_single_root_without_a_version_is_an_error(repo):
     repo.write({"package.json": pkg("tooling")})
     with pytest.raises(ConfigError, match="version"):
         discover(repo.path)
+
+
+def test_no_unit_at_all_is_a_distinct_configuration_error(repo):
+    # Callers that read past commits tell "no unit yet" apart from a broken configuration.
+    repo.write({"README.md": "x\n"})
+    with pytest.raises(NoUnitError, match="no unit found"):
+        discover(repo.path)
+    repo.write({"package.json": pkg("tooling")})
+    with pytest.raises(NoUnitError):
+        discover(repo.path)
+    assert issubclass(NoUnitError, ConfigError)
+    repo.write({"package.json": "{ not json"})
+    with pytest.raises(ConfigError) as exc:
+        discover(repo.path)
+    assert not isinstance(exc.value, NoUnitError)
 
 
 # Versions and names (AC 6)

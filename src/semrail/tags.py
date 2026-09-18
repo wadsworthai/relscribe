@@ -143,12 +143,11 @@ def _units_at(root: Path, sha: str, snapshots: dict[str, list[Unit]]) -> list[Un
                     f.write(gitutil.git(root, "show", f"{sha}:{name}"))
         try:
             found = units.discover(snapshot)
-        except units.ConfigError as exc:
+        except units.NoUnitError:
             # A commit from before the repository had any unit has nothing to release.
-            if str(exc).startswith("no unit found"):
-                found = []
-            else:
-                raise units.ConfigError(f"{sha[:7]}: {exc}") from None
+            found = []
+        except units.ConfigError as exc:
+            raise units.ConfigError(f"{sha[:7]}: {exc}") from None
     snapshots[sha] = found
     return found
 
