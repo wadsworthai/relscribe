@@ -12,12 +12,29 @@
 
 `CHANGELOG.md` is generated from commit subjects at release time, in the format described in `docs/design.md`. Nobody writes entries by hand.
 
+## CI
+
+- `.github/workflows/ci.yml` runs the tests on Python 3.11 and 3.14 for every PR and every push to `main`.
+- `.github/workflows/pr-title.yml` runs `relscribe lint` on the PR title.
+- `.github/workflows/release.yml` runs `relscribe tag <before>..<after> --push origin` on every push to `main`.
+
+These workflows run relscribe from the checked-out source (`uv run relscribe`), because this repository is relscribe itself. Consumers pin a release tag with `uvx --from git+…@vX.Y.Z` instead (see the README).
+
 ## Cutting a release
 
-The version is written only in `pyproject.toml`. The tag is `v` plus that version.
+relscribe is not published to any registry. The `vX.Y.Z` git tag is the release. The version is written in `pyproject.toml`. `relscribe.toml` sets the tag to `v` plus that version and keeps the copy in `uv.lock` in step through `sync`.
 
-Once relscribe can release itself:
-1. On an up-to-date `main`, run `uv run relscribe release --branch --commit`, then `uv lock`, and amend the commit. Push the branch and open a PR titled `chore(release): X.Y.Z`.
-2. After the squash merge, CI runs `relscribe tag` on the pushed range and publishes the tagged version to PyPI. A published tag never moves.
+1. Check out an up-to-date `main` with a clean tree, and check what will be released with `uv run relscribe status`.
+2. Run `uv run relscribe release --branch --commit`. It creates `release/<YYYY-MM-DD>` and commits `pyproject.toml`, `uv.lock` and `CHANGELOG.md` as `chore(release): relscribe <old> -> <new>`.
+3. Push the branch and open a PR whose title is exactly that subject. Squash-merge it once CI passes.
+4. On the push to `main`, `release.yml` creates the tag `v<new>` on the squash commit and pushes it. That completes the release.
 
-Until then, cut releases by hand following the same steps: set the version, write the changelog section in the same format, run `uv lock`, merge, then `git tag -a vX.Y.Z <merge commit> -m "relscribe X.Y.Z"` and push.
+- If the run fails before pushing, re-run it. `tag` creates only the tags that are missing.
+- If the tag job exits with a conflict, a tag with that name already exists on another commit. A human resolves it. A published tag never moves.
+
+## Repository setup
+
+These are one-time settings that only a maintainer can change:
+- Pull requests: allow squash merging only, and set the default squash commit message to the pull request title.
+- Actions: the workflow permissions must let a job request `contents: write`. If a ruleset protects `v*` tags, `github-actions[bot]` must be allowed to create them.
+- Recommended: require the `ci` and `pr-title` checks before merging to `main`.

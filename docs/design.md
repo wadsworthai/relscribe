@@ -146,4 +146,4 @@ Configuration is read with `tomllib`. `pnpm-workspace.yaml` is read with a minim
 
 ## Distribution
 
-relscribe is published to PyPI and tagged `vX.Y.Z` in git. Consumers run a pinned version with `uvx relscribe@X.Y.Z …`, so their CI needs only uv. relscribe versions itself: it is a single-unit repository with `tag = "v{version}"`.
+relscribe is not published to any registry. The `vX.Y.Z` git tag is the release artifact. Consumers run a pinned tag with `uvx --from git+https://github.com/wadsworthai/relscribe@vX.Y.Z relscribe …`, so their CI needs only uv and read access to the repository. relscribe versions itself: it is a single-unit repository with `tag = "v{version}"` and a `sync` entry for the version in `uv.lock`. Its own CI runs relscribe from the checked-out source, since it is the tool being released (`docs/releasing.md`).

@@ -5,6 +5,8 @@
 - No runtime dependencies: stdlib only, so the CLI runs anywhere through `uvx`.
 - Build backend: `uv_build`. The single console script is declared in `[project.scripts]`.
 - No linter or formatter is configured, and the test suite is the quality gate. Adding one is a deliberate decision.
+- CI runs the tests with `uv run --locked pytest` on Python 3.11 and 3.14, and lints PR titles (`docs/releasing.md`).
+- 2026-09-18: CI and release tagging use GitHub Actions, with `actions/checkout` and `astral-sh/setup-uv` pinned to exact release tags. Nothing is published to a registry.
 
 ## Code style
 

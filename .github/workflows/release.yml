@@ -1,0 +1,35 @@
+name: release
+
+# Tags every release merged to main. The vX.Y.Z tag is the release artifact:
+# relscribe is not published to any registry, and consumers run a pinned tag with
+# `uvx --from git+https://github.com/wadsworthai/relscribe@vX.Y.Z relscribe`.
+# This repository runs its own source (uv run) because it is relscribe itself.
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+# Two quick merges must not tag the same release in parallel.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0 # full history and tags
+      - uses: astral-sh/setup-uv@v10.1.0
+      - env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          uv run relscribe tag "$BEFORE..$AFTER" --push origin

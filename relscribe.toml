@@ -1,0 +1,5 @@
+tag = "v{version}"
+# uv.lock repeats the project's version; match only this package's entry.
+sync = [
+  { file = "uv.lock", pattern = '^name = "relscribe"\nversion = "([^"]+)"' },
+]

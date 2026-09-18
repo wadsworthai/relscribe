@@ -44,4 +44,4 @@ uv run relscribe --root <repo> <command>    # run the CLI against another reposi
 
 ## Current state
 
-Bootstrap stage: the package, CLI (global flags, exit codes, and the `lint`, `status`, `release` and `tag` commands) and test fixtures exist. `docs/design.md` is the agreed spec; `TODO.md` builds the rest in order. Ask before introducing a new tool or dependency, record the decision with its date in `docs/`, and update this file.
+Pre-release: the package, the CLI (global flags, exit codes, and the `lint`, `status`, `release` and `tag` commands), the tests, CI and the release-tagging workflow exist. The next step is the first release, 0.1.0, following `docs/releasing.md`. `docs/design.md` is the agreed spec, and `TODO.md` lists what is left. Ask before introducing a new tool or dependency, record the decision with its date in `docs/`, and update this file.
