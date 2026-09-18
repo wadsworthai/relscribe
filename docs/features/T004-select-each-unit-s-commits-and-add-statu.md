@@ -160,3 +160,19 @@ Plan approved with every question as recommended; see `docs/autopilot/decisions/
 | 12 | `test_configuration_errors_exit_2` (9 cases) |
 | 13 | `test_repository_without_commits_is_an_error`, `test_outside_a_repository_is_an_error` |
 | 14 | `test_shallow_clone_warns_unless_the_base_is_a_tag` |
+
+## Verify
+
+Verified on a scratch pnpm monorepo with 5 units, built by a script under the session scratchpad (not committed), with `uv run semrail --root <repo> status [--json]`:
+- The history starts with non-conventional subjects (`Initial import`, `WIP api stuff`, `Update web`). They sit before each unit's base, so they are neither listed nor warned about.
+- `apps/api`, tagged: `base: tag @scope/api@0.34.0`. Only the squash-merged `feat(0037:api:session): add a who-am-I read (#82)` counts: `0.34.0 -> 0.35.0 (minor)`.
+- `apps/web`, released without a tag: `base: version change` at the `chore(release)` commit, and `1.3.0 -> 1.3.1 (patch)`.
+- `apps/mobile`, never released, with its version set in its first commit: `base: whole history`. It lists `wip` and `feat(mobile): scaffold the app`, gives `0.1.0 -> 0.2.0`, and warns `not a Conventional Commit: wip`.
+- `packages/core`: a breaking `fix(core)!` arrived on a branch that a `--no-ff` merge brought into main. The merge commit is skipped and the branch commit counts: `1.0.0 -> 2.0.0 (major)`.
+- `packages/ui`, with `exclude = ["tests/**"]`: the tests-only commit is dropped and the source-and-tests commit is kept, giving `2.0.1 -> 2.0.2`.
+- A commit touching only `README.md` at the root appears in no unit. The exit code is 0.
+- In a `git clone --depth 3`, every unit falls back to `history` and carries the shallow-clone warning. The next versions there are wrong (`apps/web` shows 1.4.0, `packages/ui` 2.1.0), which is exactly what the warning is for: git reports every file of the shallow boundary commits as added, so they count for every unit.
+- `bogus = 1` in `semrail.toml` gives `semrail: semrail.toml: unknown key` `` `bogus` ``, exit 2. A `"version": "1.0"` gives `semrail: apps/api/package.json: version '1.0' is not a plain X.Y.Z version`, exit 2. Neither prints a traceback.
+- `status` on the 17-commit, 5-unit repository takes about 0.13 s.
+
+The behaviour matches the plan.
