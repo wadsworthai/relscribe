@@ -9,7 +9,7 @@ from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 
-from semrail import gitutil
+from semrail import commits, gitutil
 
 # Exit codes, docs/design.md (CLI).
 EXIT_OK = 0
@@ -44,7 +44,10 @@ def _build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", metavar="<command>")
     # Commands register here: sub.add_parser(name, parents=[common], help=…)
     # followed by .set_defaults(func=cmd_<name>), where cmd_<name>(args) -> int.
-    _ = sub, common  # unused until the first command lands
+    lint = sub.add_parser("lint", parents=[common], help="check that subjects are Conventional Commits")
+    lint.add_argument("subjects", nargs="*", metavar="<subject>", help="a subject to check, e.g. a PR title")
+    lint.add_argument("--range", metavar="<from>..<to>", help="check the subjects of the commits in this range")
+    lint.set_defaults(func=cmd_lint)
     return parser
 
 
@@ -58,6 +61,25 @@ def _root(args: argparse.Namespace) -> Path:
 def _emit(args: argparse.Namespace, data: Any, text: str) -> None:
     """Print `data` as JSON under --json, otherwise `text`."""
     print(json.dumps(data, indent=2) if args.json else text)
+
+
+def cmd_lint(args: argparse.Namespace) -> int:
+    if not args.subjects and args.range is None:
+        raise SemrailError("lint: give at least one <subject> or --range <from>..<to>")
+    checked: list[tuple[str | None, str]] = [(None, s) for s in args.subjects]
+    if args.range is not None:
+        if ".." not in args.range:
+            raise SemrailError(f"lint: --range must be <from>..<to>, got {args.range!r}")
+        # Only a range needs a repository, so `lint <subject>` runs anywhere.
+        checked += [(e.sha, e.subject) for e in commits.log(_root(args), args.range)]
+
+    results = [{"sha": sha, "subject": s, "valid": commits.parse(s) is not None} for sha, s in checked]
+    invalid = [r for r in results if not r["valid"]]
+    lines = [f"{r['sha'][:7]} invalid: {r['subject']}" if r["sha"] else f"invalid: {r['subject']}" for r in invalid]
+    noun = "subject" if len(results) == 1 else "subjects"
+    lines.append(f"{len(invalid)} of {len(results)} {noun} invalid" if invalid else f"{len(results)} {noun} valid")
+    _emit(args, {"valid": not invalid, "subjects": results}, "\n".join(lines))
+    return EXIT_FAILED if invalid else EXIT_OK
 
 
 def main(argv: list[str] | None = None) -> int:
