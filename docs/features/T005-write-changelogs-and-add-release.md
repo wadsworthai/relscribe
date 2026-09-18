@@ -160,3 +160,22 @@ Plan approved. Questions 1–10 and 12 were decided as recommended. On 11, CLAUD
 | 14 | `test_release.py::test_existing_section_for_the_new_version_is_refused`; `test_changelog.py::test_has_version` |
 | 15 | `test_release.py::test_release_never_pushes_or_tags` |
 | 16 | `test_release.py::test_warnings_are_reported_and_do_not_block`, `test_text_output` |
+
+## Verify
+
+Exercised with `uv run --project <worktree> semrail --root <repo> release …` on scratch repositories. A script under the session scratchpad built them; nothing from it is committed. The real date was used (2026-09-18, UTC).
+- **pnpm monorepo, three units, tagged.** A dirty but untracked `notes.txt` was present. The history held a squash-merged `feat(0037:api:session): …`, `fix(web)`, `wip`, a root-only `docs`, and a `refactor!` touching `apps/api` and `packages/core`. `release --branch --commit` gave:
+  - `@scope/api 0.34.0 -> 0.35.0` (minor: breaking at 0.y.z), `@scope/web 1.3.0 -> 1.3.1` with the `wip` warning, and `@scope/core 1.0.0 -> 2.0.0`;
+  - branch `release/2026-09-18` and one commit `chore(release): @scope/api 0.34.0 -> 0.35.0, @scope/web 1.3.0 -> 1.3.1, @scope/core 1.0.0 -> 2.0.0` holding exactly the 6 written files;
+  - `notes.txt` still untracked, and no tag added.
+  - `apps/api/CHANGELOG.md` was created with the header, Unreleased, `### Added` and `### Changed` (`**BREAKING:** rename the client`).
+  - The existing `apps/web/CHANGELOG.md` got the new section between Unreleased and `## [1.3.0]`, with its old lines unchanged.
+  - A second `release --json` printed empty `units`/`files` and exited 0.
+- **Single pyproject unit** with `tag = "v{version}"` and a `sync` entry on `__version__`: `release --json` wrote `pyproject.toml`, `src/tool/__init__.py` and `CHANGELOG.md` (`perf` under Changed), with no branch and no commit. `git status` showed only those three files.
+- **Legacy changelog** (`## 0.0.1 — 2026-09-08` with a `### Unknown` group, no header), with `release/2026-09-18` already taken: `release --branch` created `release/2026-09-18-2`. The changelog got the standard header, `## [Unreleased]` and `## [0.1.0] - 2026-09-18` on top, and the old section was unchanged below.
+- **Errors:**
+  - A modified tracked file: `semrail: release: tracked files have uncommitted changes; commit or stash them first`, exit 2.
+  - Only a `docs` commit since the tag: `nothing to release`, exit 0, no branch and no commit.
+  - A monorepo whose second unit's `sync` file held `bogus`: `semrail: apps/web/version.txt: sync pattern '^(.+)$': found 'bogus', not the current version 1.3.0`, exit 2. `git status --untracked-files=all` was empty (the first unit's version and new changelog were rolled back), no new release branch existed, and HEAD was unchanged.
+
+The behaviour matches the plan.
