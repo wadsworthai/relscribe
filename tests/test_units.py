@@ -407,3 +407,16 @@ def test_sync_problems_are_errors_and_nothing_is_written(repo, files, message):
     with pytest.raises(ConfigError, match=message):
         write_version(repo.path, u, "1.5.0")
     assert snapshot(repo.path) == before
+
+
+@pytest.mark.parametrize("file", ["package.json", "./package.json"])
+def test_sync_must_not_target_the_manifest(repo, file):
+    # The manifest is always rewritten; a sync entry on it would see the new version and fail confusingly.
+    repo.write(
+        {
+            **MONOREPO,
+            "semrail.toml": f"""[units."apps/api"]\nsync = [{{ file = "{file}", pattern = '"version": "(.*)"' }}]\n""",
+        }
+    )
+    with pytest.raises(ConfigError, match="sync must not target the manifest"):
+        discover(repo.path)

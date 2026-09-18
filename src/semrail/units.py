@@ -320,6 +320,10 @@ _CHECKS = {
 
 
 def _with_settings(unit: Unit, settings: dict[str, Any]) -> Unit:
+    # The manifest is always rewritten first, so a sync entry on it would only see the new version.
+    for sync in settings.get("sync", ()):
+        if _norm(sync.file) == unit.manifest:
+            raise ConfigError(f"{CONFIG}: unit {unit.path}: sync must not target the manifest {unit.manifest}")
     return Unit(
         path=unit.path, name=unit.name, dir=unit.dir, manifest=unit.manifest, version=unit.version, **settings
     )

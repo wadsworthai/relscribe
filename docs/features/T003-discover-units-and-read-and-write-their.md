@@ -103,7 +103,7 @@ Plan approved with every question as recommended; see `docs/autopilot/decisions/
 
 - `src/semrail/units.py` and `tests/test_units.py`, written test-first: the tests ran against a stub whose functions raised `NotImplementedError`, and all 48 failed before the code existed.
 - `write_version` raises `ValueError` (a caller bug, not configuration) for a new version that is not plain `X.Y.Z`. If a manifest's version changed on disk since `discover`, it raises `ConfigError` instead of overwriting.
-- Two `sync` entries on the same file, or one on the manifest, edit the pending text in turn, so none overwrites another.
+- Two `sync` entries on the same file edit the pending text in turn, so neither overwrites the other; their matches must not overlap, since a later entry would see the new version. A `sync` entry on the unit's own manifest is rejected at discovery ("sync must not target the manifest"), since the manifest is always rewritten first (found in verify).
 - With `re.MULTILINE`, `^(.*)$` also matches the empty string after a file's final newline, and the strict rule rejects that. Tests use `^(\S+)$` for a file holding only the version.
 
 ## Acceptance criteria → tests (`tests/test_units.py`)
@@ -123,4 +123,14 @@ Plan approved with every question as recommended; see `docs/autopilot/decisions/
 | 11 | `test_write_pyproject_changes_only_the_project_version` |
 | 12 | `test_write_rewrites_sync_files` (nested and top-level `app.json`), `test_global_sync_is_resolved_in_each_unit_directory` |
 | 13 | `test_sync_problems_are_errors_and_nothing_is_written` (4 cases) |
+| 13 (manifest as `sync` target) | `test_sync_must_not_target_the_manifest` (2 cases), added in verify |
 | 14 | Deferred to T004, which wires `ConfigError` into `main` (plan decision 1) |
+
+## Verify
+
+- `discover` on this repository returns one unit: `path='.'`, `name='semrail'`, `manifest='pyproject.toml'`, `version='0.0.0'`, and the defaults.
+- A scratch pnpm monorepo (a script under the session scratchpad, not committed):
+  - Discovery found `apps/api` and `apps/mobile`; the unversioned `packages/config` was skipped.
+  - Tags rendered as `api-v1.4.0` (per-unit template) and `@scope/mobile@0.34.0` (default).
+  - `write_version` changed exactly one line in each of the 6 files (`git diff --stat`: 6 files, 6 insertions, 6 deletions): `package.json` (spaces and tabs), `pyproject.toml` (with its trailing comment kept), the unit's `uv.lock` entry (not the other package at the same version), nested `app.json` and the dotenv line.
+- Edge case: a `sync` entry on the unit's own manifest was rejected, but with a misleading message (`found '1.6.0', not the current version 1.5.0`). It is now rejected at discovery with `semrail.toml: unit apps/api: sync must not target the manifest package.json`. The test was observed failing first (`DID NOT RAISE ConfigError`, 2 cases), and `docs/design.md` Units now says so.
