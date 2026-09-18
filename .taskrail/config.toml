@@ -32,3 +32,7 @@ scope = ""                   # default Conventional Commits scope of pull reques
 [checks]                     # commands the task kinds run as quality gates
 # test = "make test"
 # lint = "make lint"
+
+[autopilot]
+enabled = true
+max_lanes = 3
