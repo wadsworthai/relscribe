@@ -26,3 +26,21 @@ Reviewed: `docs/chores/T007-add-ci-pypi-publishing-and-uvx-first-usa.md` at bf8f
 | 7 | Change set and boundary as written | approve · change | **approve** | It matches the task row and the human's uvx-first rule, and does no release, tag, push or remote configuration. |
 
 The human prerequisites (PyPI pending publisher, GitHub environment `pypi`, squash-only with the PR title as the commit message, workflow permissions, tag rulesets) are passed to the human now, ahead of T010.
+
+## escalated to the human (during implement)
+
+| # | Question | Options | Decision | Reason |
+|---|---|---|---|---|
+| 1 | Publish to PyPI | publish · no registry for now | **no registry for now; consumers run `uvx --from git+https://github.com/wadsworthai/relscribe@vX.Y.Z relscribe`** | The human's decision on 2026-09-18. It replaces the earlier PyPI choice. The `vX.Y.Z` git tag is the release artifact. |
+
+Answered by the human. Scope decisions 1 and 2 (upload tool, when to publish) no longer apply.
+
+## implement gate
+
+Reviewed: `release.yml` (tag job only, `contents: write`, concurrency, full history, identity, env-passed range), `relscribe.toml`, and the README "Running relscribe" section (git-pinned `uvx` is recommended and used in every example; global install only as a non-recommended alternative). `grep -i pypi` over the README, `docs/` and the workflows finds nothing. The lane's evidence covers: actionlint 0 errors; 265 passed on 3.11 and 3.14 with `--locked`; hostile PR titles not executed; `uvx --from git+file://<scratch>@v0.1.0 relscribe --version` printing `0.1.0`; `tag --dry-run origin/main..HEAD` reporting no releases. `taskrail checks T007` re-run: 265 passed. This repository has no tags.
+
+| # | Question | Options | Decision | Reason |
+|---|---|---|---|---|
+| 1 | Backlog text naming PyPI (E01 "Done when", T010 description) | update in this branch · separately | **update in this branch** | The backlog merges with the docs that describe the new release path. Use `taskrail edit` for T010. Change only the words in E01's "Done when" line, then run `taskrail validate`. |
+| 2 | T007 title still names PyPI | retitle · leave | **retitle** to "Add CI, release tagging and uvx-first usage docs" | The title must not describe work that isn't done. The branch name stays. |
+| 3 | Approve the implement stage | approve | **approve** | |
