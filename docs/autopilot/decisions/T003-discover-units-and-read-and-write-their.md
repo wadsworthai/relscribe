@@ -24,3 +24,13 @@ Implement test-first: record each new test failing before the code exists, as th
 |---|---|---|---|---|
 | 1 | Which lane edits which part of `docs/design.md` | split by section · one owner | **split by section: T002 edits Versioning and Commit parsing; T003 edits Units** | The sections don't overlap, so the parallel edits merge cleanly. |
 | 2 | `docs/features/README.md` rows | keep all | **keep all, one row per task** | This is known conflict class 2. |
+
+## implement gate
+
+Reviewed: the diff `ce6e880..339fb09`, with `units.py` read in full for `discover`, `write_version`, the pnpm parser and member globbing, plus `tests/test_units.py` and the Units bullets in `docs/design.md`. The test-first evidence is 48 failures against a `NotImplementedError` stub. The fixture fix (a TOML literal string for `\S`) left the assertions unchanged. `taskrail checks T003` re-run: passed. No sibling tool is named in src, tests or design.md.
+
+| # | Question | Options | Decision | Reason |
+|---|---|---|---|---|
+| 1 | Implementation choices within the plan: `ValueError` for a non-plain new version, `ConfigError` when the manifest changed since `discover`, sequential sync edits on the same file, `Unit.bump` as overrides only | accept · change | **accept** | Each follows the approved plan. `ValueError` marks a caller bug, not configuration. |
+
+Carried to T004: wire `units.ConfigError` into `main` (exit 2) and test AC 14. Merge `Unit.bump` over `commits.DEFAULT_BUMPS`. Convert `ValueError` from `commits`/`units` into exit 2, never a traceback.
