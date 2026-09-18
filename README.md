@@ -15,7 +15,7 @@ semrail reads the [Conventional Commits](https://www.conventionalcommits.org/) h
 | `feat!: …`, or any type with a `BREAKING CHANGE:` footer | MAJOR |
 | any other type (`docs`, `chore`, `refactor`, …) | none |
 
-<!-- TODO: document the rule for versions before 1.0.0 once docs/design.md defines it. -->
+Before 1.0.0, a breaking change bumps MINOR instead of MAJOR.
 
 ## Requirements
 
@@ -26,7 +26,8 @@ semrail reads the [Conventional Commits](https://www.conventionalcommits.org/) h
 ## Installation
 
 ```sh
-uv tool install semrail --from "git+<repo-url>@vX.Y.Z"
+uvx semrail@X.Y.Z <command>      # run a pinned version, e.g. in CI
+uv tool install semrail          # or install it
 ```
 
 <!-- TODO: document repository setup (`semrail init`) once it exists. -->
@@ -70,4 +71,4 @@ See [docs/releasing.md](docs/releasing.md).
 
 ## License
 
-<!-- TODO: choose a license. -->
+[MIT](LICENSE)

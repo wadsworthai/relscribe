@@ -1,52 +1,111 @@
 # Design
 
-This is the spec the code answers to. Most of it is still a plan. Build each part only when a concrete need requires it.
+This is the spec the code answers to. Nothing is implemented yet; the backlog in `TODO.md` builds it in order.
+
+## Scope
+
+semrail does four things for every versioned unit in a repository:
+- It computes the next version from Conventional Commits.
+- It writes versions and changelogs in one release commit.
+- It tags merged releases.
+- It lints commit subjects.
+
+Everything else stays in the consumer's CI: opening pull requests, promoting or deploying branches, choosing which tests to run, merging hotfixes back, and publishing packages.
+
+## Units
+
+A unit is a directory with its own version.
+- **Discovery.** Units are discovered at run time from `pnpm-workspace.yaml`, the `workspaces` field of the root `package.json`, or `[tool.uv.workspace]` in the root `pyproject.toml`. Without a workspace, the repository root is the single unit.
+- **Source of truth.** The version is read from the unit's `package.json` `version` or `pyproject.toml` `[project].version`. That is the only authoritative copy, and there is no repository-wide version.
+- **Name.** `{name}` is the manifest's package name and `{dir}` is the unit directory's base name.
+
+`semrail.toml` at the repository root is optional and only overrides defaults. It can be set globally or per unit (`[units."<path>"]`):
+
+| Key | Default | Purpose |
+|---|---|---|
+| `tag` | `"{name}@{version}"` | Tag template |
+| `changelog` | `true` | Whether to write `CHANGELOG.md`. Set it to `false` when another tool owns the changelog |
+| `exclude` | `[]` | Globs of files that never cause a bump on their own, such as tests |
+| `sync` | `[]` | Other files that repeat the version, each `{ file, pattern }` with one capture group holding the version |
+| `bump` | see Versioning | Map from commit type to `"major"`, `"minor"` or `"patch"` |
+
+semrail never edits `.gitattributes` and never installs merge drivers.
 
 ## Versioning
 
-semrail follows [SemVer 2.0.0](https://semver.org/) and reads [Conventional Commits 1.0.0](https://www.conventionalcommits.org/) as written. Record any deviation here.
+- semrail follows [SemVer 2.0.0](https://semver.org/) and reads [Conventional Commits 1.0.0](https://www.conventionalcommits.org/). Versions use plain `X.Y.Z` spelling in every ecosystem.
+- There are no pre-releases and no build metadata.
 
-| Commit | Bump |
-|---|---|
-| `fix:` | PATCH |
-| `feat:` | MINOR |
-| `!` before the colon, or a `BREAKING CHANGE:` footer | MAJOR |
-| any other type | none |
+| Commit | ≥ 1.0.0 | 0.y.z |
+|---|---|---|
+| `!` before the colon, or a `BREAKING CHANGE:` / `BREAKING-CHANGE:` footer | MAJOR | MINOR |
+| `feat` | MINOR | MINOR |
+| `fix`, `perf`, `refactor` | PATCH | PATCH |
+| any other type | none | none |
 
-- Open: how versions before 1.0.0 (0.y.z) bump. Decide once, record it here, and apply it everywhere.
+The highest bump among a unit's commits wins.
 
 ## Commit parsing
 
-- The input is the squash-merged PR titles on the mainline.
-- Subjects may end with a reference in parentheses, as in `feat(cli): add x (T006)`, and the parser must accept that.
-- A scope names an area, not a package, so it cannot select a package in a monorepo. Map paths to packages explicitly in config.
+- The subject has the form `type(scope)!: description`. The scope is free text and may contain `:`, as in `feat(0037:api:session): …`.
+- A trailing reference such as `(#82)` or `(#T054)` stays part of the description.
+- A subject that does not parse contributes nothing. It is reported as a warning, and `semrail lint` fails on it.
 
-## Changelog merging
+## Selecting a unit's commits
 
-- Open: other tools may already claim `CHANGELOG.md` in `.gitattributes` with a merge driver. Decide whether semrail claims those paths, detects an existing driver, or stays out of merge resolution.
+The commits for a unit are `git log <base>..<ref> --no-merges -- <unit path>`, minus any commit whose files in the unit all match `exclude`. The base is:
+1. the tag of the unit's current version, if it exists;
+2. otherwise, the last commit that changed the unit's version;
+3. otherwise, the unit's whole history.
 
-## CLI contract (planned)
+A commit that only touches files outside every unit bumps nothing.
 
-- Every command accepts `--json` (printed through one `_emit(data, as_json, text)` helper) and `--root <path>`. Without `--root`, the root is found by searching upward for `.semrail/config.toml`.
-- Exit codes are named constants at the top of `cli.py` and are stable, because agents branch on them: 0 success, 1 validation failed, 2 usage, config or git error.
-- Errors go to stderr prefixed with `semrail: ` and name the next command to run when possible. Validation reports every problem, each with its file and line, before exiting.
+## Changelog
 
-## Architecture (planned)
+- One `CHANGELOG.md` per unit, in [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/) format.
+- If the file is missing, semrail creates it with the standard header and an empty `## [Unreleased]` section.
+- A release inserts `## [X.Y.Z] - YYYY-MM-DD` below `## [Unreleased]`. Existing sections are never rewritten.
+- Groups, in Keep a Changelog order:
+  - Added: `feat`.
+  - Changed: `perf`, `refactor`, and breaking changes, which are prefixed `**BREAKING:**`.
+  - Fixed: `fix`.
+- Each bullet is the subject's description without type and scope, followed by the short SHA in parentheses as plain text: `- add a who-am-I read (#82) (241aae1)`.
+
+## Releases and tags
+
+- **Bump timing.** Versions change only in a release commit, never on task branches.
+- **Release commit.** `semrail release --commit` writes one commit whose subject is `chore(release): <name> <old> -> <new>, …`.
+- **Release detection.** A commit is a release for a unit when it changes that unit's version. The commit message and any manifest file are never consulted.
+- **Tags.** Tags are annotated and follow the unit's `tag` template. A published tag never moves. If a tag already exists on the same commit, creating it is a no-op. If it exists on another commit, it is a conflict that a human resolves.
+
+## CLI
+
+Every command accepts `--json` and `--root <path>`. Without `--root`, the root is the enclosing git repository.
+
+| Command | Does |
+|---|---|
+| `semrail status` | Reports per unit: current version, base, the commits that count, the next version, and warnings |
+| `semrail release [--commit] [--branch]` | Writes the next versions, `sync` files and changelogs. `--commit` makes the release commit. `--branch` first creates `release/<YYYY-MM-DD>[-N]`. It never pushes and never tags |
+| `semrail tag <from>..<to> [--push <remote>]` | Tags every release commit in the range, plus the most recent untagged release before it |
+| `semrail lint [<subject>…] [--range <from>..<to>]` | Checks that subjects are Conventional Commits, for example on pull request titles in CI |
+
+- Exit codes: 0 success; 1 lint or validation failed; 2 usage, configuration or git error; 4 tag conflict.
+- Errors go to stderr prefixed with `semrail: `.
+
+## Architecture
 
 ```
 src/semrail/
   cli.py        # argparse; each subcommand is a thin cmd_*(args) -> int
-  config.py     # find_root + load_config (tomllib)
-  model.py      # domain dataclasses, each with to_dict() for --json
+  commits.py    # subject parsing and bump rules
+  units.py      # discovery, config, reading and writing versions
+  changelog.py  # Keep a Changelog rendering and insertion
   gitutil.py    # the only module that shells out to git
-  <domain>.py   # one small module per concern
 tests/          # pytest; conftest.py builds real git repos in tmp_path
 ```
 
-- The logic lives in domain modules that can be imported and tested without the CLI.
-- Configuration lives in a committed `.semrail/config.toml`. Anything derivable from git, such as tags or commits, is read at runtime and never cached in the repo. Machine-local state never goes into `.semrail/`.
+Configuration is read with `tomllib`. `pnpm-workspace.yaml` is read with a minimal parser for its `packages` list, which keeps semrail free of runtime dependencies.
 
-## Distribution (planned)
+## Distribution
 
-- Nothing is published to PyPI; the git tag is the release artifact. Install with `uv tool install semrail --from "git+<repo-url>@vX.Y.Z"`.
-- Candidates, to build only when needed: an idempotent `semrail init`; a committed wrapper `.semrail/bin/semrail` that runs the version pinned in the config; agent skills installed into consumer repos. Skills tell the agent which command to run and never reimplement the logic.
+semrail is published to PyPI and tagged `vX.Y.Z` in git. Consumers run a pinned version with `uvx semrail@X.Y.Z …`, so their CI needs only uv. semrail versions itself: it is a single-unit repository with `tag = "v{version}"`.

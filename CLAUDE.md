@@ -44,4 +44,4 @@ uv run semrail --root <repo> <command>      # run the CLI against another reposi
 
 ## Current state
 
-Bootstrap stage: there is no code yet, and most of `docs/design.md` is a plan, not a commitment. Ask before introducing a new tool or dependency, record the decision with its date in `docs/`, and update this file.
+Bootstrap stage: there is no code yet. `docs/design.md` is the agreed spec; `TODO.md` builds it in order. Ask before introducing a new tool or dependency, record the decision with its date in `docs/`, and update this file.

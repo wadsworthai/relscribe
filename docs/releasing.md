@@ -3,18 +3,21 @@
 ## Branches and PRs
 
 - Work on a branch and reach `main` through a PR. Every PR is squash-merged.
-- The PR title is a Conventional Commit and becomes the single commit on `main`. Its type reflects the most significant change.
-- Mark breaking changes with `!` and give them their own changelog entry.
+- The PR title is a Conventional Commit and becomes the single commit on `main`, so it decides the next version. Its type reflects the most significant change.
+- Mark breaking changes with `!`.
 - Put trailers at the end of the PR description so they survive the squash.
+- Task branches never change the version or `CHANGELOG.md`.
 
 ## Changelog
 
-`CHANGELOG.md` starts with a `## Unreleased` section. Entries are bullets with a bold lead that describe user-visible behaviour, not individual commits.
+`CHANGELOG.md` is generated from commit subjects at release time, in the format described in `docs/design.md`. Nobody writes entries by hand.
 
 ## Cutting a release
 
-The version is written only in `pyproject.toml`, and it must equal the tag without the `v`.
+The version is written only in `pyproject.toml`. The tag is `v` plus that version.
 
-1. In a PR: set the version, run `uv lock`, and rename `## Unreleased` to `## X.Y.Z`.
-2. After the merge: `git tag -a vX.Y.Z <merge commit> -m "semrail X.Y.Z"`, then push the tag. A published tag never moves.
-3. Verify a clean install from the tag, then bump `main` to the next `.dev0`.
+Once semrail can release itself:
+1. On an up-to-date `main`, run `uv run semrail release --branch --commit`, then `uv lock`, and amend the commit. Push the branch and open a PR titled `chore(release): X.Y.Z`.
+2. After the squash merge, CI runs `semrail tag` on the pushed range and publishes the tagged version to PyPI. A published tag never moves.
+
+Until then, cut releases by hand following the same steps: set the version, write the changelog section in the same format, run `uv lock`, merge, then `git tag -a vX.Y.Z <merge commit> -m "semrail X.Y.Z"` and push.
