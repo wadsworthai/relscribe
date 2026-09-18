@@ -94,3 +94,33 @@ Not touched: `cli.py`, `conftest.py`, `gitutil.py` (no git is needed to discover
 5. **The `sync` error rule** as proposed above (missing file, no match, or any match ≠ current version → exit 2, checked before writing anything; every match is replaced). Alternative: allow a mismatch and overwrite it (self-healing drift, but silently hides a wrong pattern).
 6. **`docs/design.md` clarifications.** Recommend adding one short bullet each to Units for questions 2–5 in this task's implement stage, since docs change with the behaviour. Alternative: record them only in this artifact.
 - **Risk:** discovery globs use `pathlib` semantics, which differ from pnpm's in corner cases (brace expansion, extglobs). The common forms (`dir/*`, `dir/**`, `!dir/x`) are tested.
+
+## Decisions
+
+Plan approved with every question as recommended; see `docs/autopilot/decisions/T003-discover-units-and-read-and-write-their.md`. The rules for questions 2–5 are now in `docs/design.md`, Units.
+
+## Implementation
+
+- `src/semrail/units.py` and `tests/test_units.py`, written test-first: the tests ran against a stub whose functions raised `NotImplementedError`, and all 48 failed before the code existed.
+- `write_version` raises `ValueError` (a caller bug, not configuration) for a new version that is not plain `X.Y.Z`. If a manifest's version changed on disk since `discover`, it raises `ConfigError` instead of overwriting.
+- Two `sync` entries on the same file, or one on the manifest, edit the pending text in turn, so none overwrites another.
+- With `re.MULTILINE`, `^(.*)$` also matches the empty string after a file's final newline, and the strict rule rejects that. Tests use `^(\S+)$` for a file holding only the version.
+
+## Acceptance criteria → tests (`tests/test_units.py`)
+
+| AC | Tests |
+|---|---|
+| 1 | `test_pnpm_workspace_discovers_versioned_members` |
+| 2 | `test_pnpm_workspace_without_packages_falls_through`, `test_pnpm_workspace_flow_list_is_an_error` |
+| 3 | `test_package_json_workspaces` |
+| 4 | `test_uv_workspace` |
+| 5 | `test_single_python_package`, `test_single_root_prefers_versioned_package_json`, `test_single_root_falls_back_to_pyproject`, `test_single_root_without_a_version_is_an_error` |
+| 6 | `test_invalid_manifests_are_errors` (7 cases) |
+| 7 | `test_defaults_without_semrail_toml`, `test_tag_templates` (3 cases) |
+| 8 | `test_global_keys_and_per_unit_overrides` |
+| 9 | `test_invalid_semrail_toml_is_an_error` (18 cases) |
+| 10 | `test_write_package_json_changes_only_the_top_level_version` |
+| 11 | `test_write_pyproject_changes_only_the_project_version` |
+| 12 | `test_write_rewrites_sync_files` (nested and top-level `app.json`), `test_global_sync_is_resolved_in_each_unit_directory` |
+| 13 | `test_sync_problems_are_errors_and_nothing_is_written` (4 cases) |
+| 14 | Deferred to T004, which wires `ConfigError` into `main` (plan decision 1) |

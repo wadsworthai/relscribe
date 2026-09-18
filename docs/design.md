@@ -29,6 +29,11 @@ A unit is a directory with its own version.
 | `sync` | `[]` | Other files that repeat the version, each `{ file, pattern }` with one capture group holding the version |
 | `bump` | see Versioning | Map from commit type to `"major"`, `"minor"` or `"patch"` |
 
+- A key in `[units."<path>"]` replaces the global value for that unit; nothing is merged. A unit table that names no unit, an unknown key or a wrong type is a configuration error.
+- A workspace member without a static version is not a unit and is skipped.
+- A `sync` `file` is relative to the unit directory. The pattern is a Python regular expression applied with `re.MULTILINE`.
+- Writing a version checks every `sync` entry first and writes nothing if one fails: a missing file, a pattern that matches nothing, or a match whose group is not the current version is a configuration error. Otherwise every match is replaced.
+
 semrail never edits `.gitattributes` and never installs merge drivers.
 
 ## Versioning
