@@ -23,3 +23,11 @@ Reviewed: `docs/features/T004-select-each-unit-s-commits-and-add-statu.md` at 67
 | 8 | Add `history.py` to Architecture | yes · no | as recommended | Keeps the spec accurate. |
 
 Allowed `docs/design.md` edits for this task: the opening sentence, Units (the `exclude` syntax clause only), Versioning (the merge sentence), Selecting a unit's commits, CLI, and Architecture. Implement test-first and record the failing run.
+
+## implement gate
+
+Reviewed: `history.py` in full and the diff of `cli.py`/`commits.py` in 9f217f7; the test-first evidence (45 failures before the code existed; the two follow-up test fixes left the rules unchanged); `taskrail checks T004` re-run (171 passed). Exercised on a scratch pnpm monorepo: an untagged unit counts its whole history (`0.1.0 -> 0.2.0`, minor). A tagged unit starts from its tag (`1.2.0 -> 1.2.1`) and warns about a `wip stuff` subject. An invalid `semrail.toml` prints `semrail: semrail.toml: \`tag\` must be a string` with exit 2.
+
+| # | Question | Options | Decision | Reason |
+|---|---|---|---|---|
+| 1 | Stale "no commands yet" in CLAUDE.md/AGENTS.md "Current state", and the `tests/test_units.py` docstring | fix here · follow-up · T007 | **fix here, in the verify stage** | They are two one-line edits caused by this task's behaviour, and CLAUDE.md requires docs in the same PR. Keep CLAUDE.md and AGENTS.md identical. |
