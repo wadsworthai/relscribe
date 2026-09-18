@@ -40,3 +40,15 @@ Carried to T004: wire `units.ConfigError` into `main` (exit 2) and test AC 14. M
 T001 was squash-merged into main as df184de, after an earlier plain merge (a8dfa74) was removed from main at the human's request. The branch was rebased onto origin/main (df184de) with `git rebase --onto`. There were no conflicts.
 
 After the rebase: `git diff --check` reports no conflict markers, `taskrail checks` passed, and `taskrail validate` reports 0 errors and 0 warnings.
+
+## rebase after T002
+
+T002 was squash-merged into main as 426f3ca. The branch was rebased onto origin/main (426f3ca).
+
+| # | Question | Options | Decision | Reason |
+|---|---|---|---|---|
+| 1 | Conflict in `docs/features/README.md` | keep both · stop | **keep both** | Known class 2: appended index rows. |
+| 2 | Conflict in `docs/autopilot/decisions/README.md` | keep both · stop | **keep both** | Known class 2: appended index rows. |
+| 3 | Conflict in `TODO.md` (T002 and T003 rows) | ✅ wins · stop | **✅ on both rows** | Known class 1. No `Reopens:` commit on either side. |
+
+`docs/design.md` merged without a conflict: T002's Versioning and Commit parsing edits and T003's Units edits are both present. After the rebase: `git diff --check` reports no conflict markers, `taskrail checks T003` passed (126 tests), and `taskrail validate` reports 0 errors and 0 warnings.
