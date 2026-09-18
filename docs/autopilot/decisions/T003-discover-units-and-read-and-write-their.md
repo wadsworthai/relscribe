@@ -1,0 +1,26 @@
+# T003 — autopilot decisions
+
+Decisions the orchestrator took on the human's behalf while this task ran in an autopilot lane.
+Each is recorded before it is given to the lane.
+
+## plan gate
+
+Reviewed: `docs/features/T003-discover-units-and-read-and-write-their.md` at 638c79d, the diff `origin/T001-scaffold-the-package-cli-skeleton-and-te..638c79d` (artifact and index only), `taskrail checks T003 --stage plan` (no checks at this stage; passed). The 14 criteria cover the task row and `docs/design.md` Units, including the monorepo shapes semrail must support (pnpm/npm/uv workspaces, scoped names, and mirrors in `pyproject.toml`, `uv.lock`, `app.json` and a dotenv line).
+
+| # | Question | Options | Decision | Reason |
+|---|---|---|---|---|
+| 1 | How `units.py` raises errors | `ConfigError` in `units.py`, wired into `main` by T004 · import `SemrailError` inside a function · new `errors.py` | as recommended | Same pattern as `gitutil.GitError`; no cyclic import, and no edit to `cli.py`, which T002 is changing. T004 adds the `except` and tests AC 14. |
+| 2 | Per-unit keys replace or merge the global value | replace · merge `bump` | as recommended | KISS: one rule for every key. |
+| 3 | Workspace members without a version | skip · error | as recommended | A package with no version is not a unit under `docs/design.md` ("a directory with its own version"); tooling packages are common in workspaces. |
+| 4 | Where a `sync` `file` is resolved | unit directory · repository root | as recommended | Every mirror in the known shapes sits in the unit's own directory. |
+| 5 | `sync` errors (missing file, no match, a match that is not the current version) exit 2 before anything is written | strict · overwrite mismatches | as recommended | A wrong pattern must fail loudly, never write a partial release. |
+| 6 | Add bullets for 2–5 to `docs/design.md` Units | yes · artifact only | as recommended | Docs change with the behaviour. Edit only the **Units** section; T002 owns Versioning and Commit parsing. |
+
+Implement test-first: record each new test failing before the code exists, as the feature executor requires.
+
+## Conflict handling agreed for all lanes
+
+| # | Question | Options | Decision | Reason |
+|---|---|---|---|---|
+| 1 | Which lane edits which part of `docs/design.md` | split by section · one owner | **split by section: T002 edits Versioning and Commit parsing; T003 edits Units** | The sections don't overlap, so the parallel edits merge cleanly. |
+| 2 | `docs/features/README.md` rows | keep all | **keep all, one row per task** | This is known conflict class 2. |
