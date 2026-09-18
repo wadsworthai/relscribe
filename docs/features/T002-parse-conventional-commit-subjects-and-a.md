@@ -83,6 +83,28 @@ Text: one line per invalid subject, `invalid: <subject>` (prefixed with the shor
 2. **A type configured as `major` while 0.y.z.** Recommend treating it like a breaking change: `minor` while 0.y.z, which keeps the rule "no MAJOR before 1.0.0" true for every source of a major bump, and adding that to the Versioning section. Alternative: honour `major` literally, so a `bump = { x = "major" }` config moves 0.y.z to 1.0.0.
 3. **README drift.** `README.md` "How versions are computed" lists `refactor` among the types that bump nothing and omits `perf` and `BREAKING-CHANGE:`, contradicting `docs/design.md`. Recommend correcting those two rows here, since this task implements the rules. Alternative: leave it to T007's README work.
 
+Decisions 1–3 were approved as recommended (`docs/autopilot/decisions/T002-parse-conventional-commit-subjects-and-a.md`).
+
+## Tests
+
+Written before the code. The first run failed: `tests/test_lint.py` had 15 failures (`invalid choice: 'lint'`), and `tests/test_commits.py` failed at collection (`No module named 'semrail.commits'`).
+
+| Criterion | Tests |
+|---|---|
+| 1 | `test_lint.py`: `test_valid_subject`, `test_invalid_subject`, `test_one_invalid_among_several` |
+| 2 | `test_commits.py`: `test_parses` (8 cases) |
+| 3 | `test_commits.py`: `test_rejects` (10 cases, including a multi-line subject) |
+| 4 | `test_commits.py`: `test_breaking_footer`, `test_lowercase_footer_is_not_breaking`, `test_footer_on_unparseable_subject_yields_nothing` |
+| 5 | `test_commits.py`: `test_bump_defaults` (15 cases), `test_bump_footer_is_breaking` |
+| 6 | `test_commits.py`: `test_bump_override_map_replaces_defaults`, `test_bump_configured_major_is_minor_before_1_0_0` |
+| 7 | `test_commits.py`: `test_next_version`, `test_next_version_rejects_non_plain_versions` |
+| 8 | `test_lint.py`: `test_range`, `test_range_all_valid`, `test_range_uses_enclosing_repository`, `test_empty_range`, `test_range_skips_merge_commits`, `test_subjects_and_range_combined` |
+| 9 | `test_lint.py`: `test_bad_range_is_an_error` (`HEAD`, `no-such-ref..HEAD`), `test_nothing_to_lint_is_a_usage_error` |
+| 10 | `test_lint.py`: `test_works_outside_a_repository` |
+| 11 | `test_lint.py`: `test_json_after_subcommand`, `test_json_before_subcommand` |
+
+`taskrail checks T002 --stage implement`: 72 passed, and lint is not configured. The suite also passes on Python 3.11 (`uv run --isolated --python 3.11 pytest`).
+
 ## Open questions and risks
 
 - Parentheses inside a scope (`feat(a(b)): x`) do not parse. The spec calls the scope free text but gives only `:` as an example; forbidding parentheses keeps a trailing `(#82)` unambiguous.
