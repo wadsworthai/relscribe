@@ -7,9 +7,9 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-from semrail import commits, gitutil
-from semrail.commits import Commit, LogEntry
-from semrail.units import PACKAGE_JSON, Unit
+from relscribe import commits, gitutil
+from relscribe.commits import Commit, LogEntry
+from relscribe.units import PACKAGE_JSON, Unit
 
 SHALLOW_WARNING = "shallow clone: history may be incomplete; fetch full history and tags"
 

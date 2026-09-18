@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from semrail import changelog
-from semrail.commits import DEFAULT_BUMPS, LogEntry, parse
+from relscribe import changelog
+from relscribe.commits import DEFAULT_BUMPS, LogEntry, parse
 
 HEADER = (
     "# Changelog\n"

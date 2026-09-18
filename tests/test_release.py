@@ -1,4 +1,4 @@
-"""`semrail release`: versions, changelogs, the release branch and commit.
+"""`relscribe release`: versions, changelogs, the release branch and commit.
 
 docs/design.md, Changelog, Releases and tags, and CLI.
 """
@@ -11,7 +11,7 @@ import subprocess
 
 import pytest
 
-from semrail import cli as cli_module
+from relscribe import cli as cli_module
 
 DATE = "2026-09-18"
 
@@ -108,7 +108,7 @@ def test_pyproject_unit(cli, repo):
 
 
 def test_bump_override_type_goes_to_changed_and_others_are_left_out(cli, repo):
-    repo.commit("chore: init", {"package.json": pkg("app", "1.0.0"), "semrail.toml": '[bump]\ndocs = "patch"\n'})
+    repo.commit("chore: init", {"package.json": pkg("app", "1.0.0"), "relscribe.toml": '[bump]\ndocs = "patch"\n'})
     repo.git("tag", "app@1.0.0")
     docs = repo.commit("docs: explain x", {"a.md": "1\n"})
     repo.commit("chore: tidy", {"a.txt": "1\n"})
@@ -162,7 +162,7 @@ def test_changelog_false_writes_only_versions(cli, repo):
         {
             "package.json": pkg("app", "1.0.0"),
             "version.txt": "1.0.0\n",
-            "semrail.toml": 'changelog = false\nsync = [{ file = "version.txt", pattern = "^(.+)$" }]\n',
+            "relscribe.toml": 'changelog = false\nsync = [{ file = "version.txt", pattern = "^(.+)$" }]\n',
         },
     )
     repo.git("tag", "app@1.0.0")
@@ -313,7 +313,7 @@ def test_uncommitted_tracked_changes_are_refused(cli, repo):
 
     result = release(cli, repo, "--commit", code=2)
 
-    assert result.err.startswith("semrail: ")
+    assert result.err.startswith("relscribe: ")
     assert "uncommitted" in result.err
     assert json.loads((repo.path / "package.json").read_text())["version"] == "1.0.0"
     assert repo.git("status", "--porcelain") == " M a.txt\n"
@@ -340,7 +340,7 @@ def test_untracked_files_do_not_block(cli, repo):
 def test_a_failing_unit_rolls_back_every_file(cli, repo):
     workspace(repo, "api", "web")
     repo.write({"apps/web/version.txt": "0.9.0\n", "apps/api/CHANGELOG.md": HEADER})
-    repo.write({"semrail.toml": '[units."apps/web"]\nsync = [{ file = "version.txt", pattern = "^(.+)$" }]\n'})
+    repo.write({"relscribe.toml": '[units."apps/web"]\nsync = [{ file = "version.txt", pattern = "^(.+)$" }]\n'})
     repo.commit("chore: config")
     repo.git("tag", "@scope/api@1.0.0")
     repo.git("tag", "@scope/web@1.0.0")
@@ -351,7 +351,7 @@ def test_a_failing_unit_rolls_back_every_file(cli, repo):
 
     result = release(cli, repo, "--branch", "--commit", code=2)
 
-    assert result.err.startswith("semrail: apps/web/version.txt")
+    assert result.err.startswith("relscribe: apps/web/version.txt")
     assert repo.git("status", "--porcelain") == ""
     assert (repo.path / "apps/api/CHANGELOG.md").read_text() == HEADER
     assert not (repo.path / "apps/web/CHANGELOG.md").exists()
@@ -363,7 +363,7 @@ def test_a_failing_unit_rolls_back_every_file(cli, repo):
 def test_a_failing_unit_removes_changelogs_it_created(cli, repo):
     workspace(repo, "api", "web")
     repo.write({"apps/web/version.txt": "0.9.0\n"})
-    repo.write({"semrail.toml": '[units."apps/web"]\nsync = [{ file = "version.txt", pattern = "^(.+)$" }]\n'})
+    repo.write({"relscribe.toml": '[units."apps/web"]\nsync = [{ file = "version.txt", pattern = "^(.+)$" }]\n'})
     repo.commit("chore: config")
     repo.commit("feat(api): add x", {"apps/api/a.txt": "1\n"})
     repo.commit("fix(web): y", {"apps/web/a.txt": "1\n"})
@@ -383,7 +383,7 @@ def test_existing_section_for_the_new_version_is_refused(cli, repo):
 
     result = release(cli, repo, code=2)
 
-    assert result.err == "semrail: release: CHANGELOG.md already has a section for 1.0.1\n"
+    assert result.err == "relscribe: release: CHANGELOG.md already has a section for 1.0.1\n"
     assert repo.git("status", "--porcelain") == ""
 
 

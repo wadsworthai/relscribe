@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from semrail import gitutil
+from relscribe import gitutil
 
 
 def test_toplevel_from_a_subdirectory(repo):

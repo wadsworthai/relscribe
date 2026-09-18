@@ -1,7 +1,7 @@
-"""Unit discovery, semrail.toml, and reading and writing versions (docs/design.md, Units).
+"""Unit discovery, relscribe.toml, and reading and writing versions (docs/design.md, Units).
 
-These call `semrail.units` directly to cover writing versions and every configuration rule;
-`semrail status` (tests/test_status.py) covers units through the CLI.
+These call `relscribe.units` directly to cover writing versions and every configuration rule;
+`relscribe status` (tests/test_status.py) covers units through the CLI.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from semrail.units import ConfigError, NoUnitError, Unit, discover, write_version
+from relscribe.units import ConfigError, NoUnitError, Unit, discover, write_version
 
 
 def pkg(name: str | None, version: str | None = None, **extra: object) -> str:
@@ -125,8 +125,8 @@ def test_uv_workspace(repo):
 
 
 def test_single_python_package(repo):
-    repo.write({"pyproject.toml": pyproject("semrail", "0.0.0")})
-    assert summary(discover(repo.path)) == [(".", "semrail", "repo", "pyproject.toml", "0.0.0")]
+    repo.write({"pyproject.toml": pyproject("relscribe", "0.0.0")})
+    assert summary(discover(repo.path)) == [(".", "relscribe", "repo", "pyproject.toml", "0.0.0")]
 
 
 def test_single_root_prefers_versioned_package_json(repo):
@@ -182,10 +182,10 @@ def test_invalid_manifests_are_errors(repo, files):
         discover(repo.path)
 
 
-# semrail.toml (AC 7-9)
+# relscribe.toml (AC 7-9)
 
 
-def test_defaults_without_semrail_toml(repo):
+def test_defaults_without_relscribe_toml(repo):
     repo.write({"package.json": pkg("@scope/api", "1.0.0")})
     [u] = discover(repo.path)
     assert (u.tag, u.changelog, u.exclude, u.sync, u.bump) == ("{name}@{version}", True, (), (), {})
@@ -197,7 +197,7 @@ def test_defaults_without_semrail_toml(repo):
     [("v{version}", "v1.2.3"), ("{dir}-v{version}", "repo-v1.2.3"), ("{name}/{version}", "@scope/api/1.2.3")],
 )
 def test_tag_templates(repo, template, expected):
-    repo.write({"package.json": pkg("@scope/api", "1.0.0"), "semrail.toml": f'tag = "{template}"\n'})
+    repo.write({"package.json": pkg("@scope/api", "1.0.0"), "relscribe.toml": f'tag = "{template}"\n'})
     [u] = discover(repo.path)
     assert u.tag_name("1.2.3") == expected
 
@@ -213,7 +213,7 @@ def test_global_keys_and_per_unit_overrides(repo):
     repo.write(
         {
             **MONOREPO,
-            "semrail.toml": (
+            "relscribe.toml": (
                 'tag = "{dir}-v{version}"\n'
                 "changelog = false\n"
                 'exclude = ["**/*.test.ts"]\n'
@@ -262,11 +262,11 @@ def test_global_keys_and_per_unit_overrides(repo):
         ('[units."apps/nope"]\ntag = "x"\n', "apps/nope"),
         ('[units."apps/api"]\nunits = {}\n', "units"),
         ('[units."apps/api"]\nchangelog = 1\n', "changelog"),
-        ("tag = \n", "semrail.toml"),
+        ("tag = \n", "relscribe.toml"),
     ],
 )
-def test_invalid_semrail_toml_is_an_error(repo, toml, message):
-    repo.write({**MONOREPO, "semrail.toml": toml})
+def test_invalid_relscribe_toml_is_an_error(repo, toml, message):
+    repo.write({**MONOREPO, "relscribe.toml": toml})
     with pytest.raises(ConfigError, match=message):
         discover(repo.path)
 
@@ -358,7 +358,7 @@ def test_write_rewrites_sync_files(repo, app_json):
             "apps/mobile/package.json": pkg("@scope/mobile", "0.34.0"),
             "apps/mobile/app.json": app_json,
             "apps/mobile/.env": "API_URL=http://localhost\nEXPO_PUBLIC_APP_VERSION=0.34.0\nOTHER=0.34.0\n",
-            "semrail.toml": SYNC_TOML,
+            "relscribe.toml": SYNC_TOML,
         }
     )
     units = discover(repo.path)
@@ -386,7 +386,7 @@ def test_global_sync_is_resolved_in_each_unit_directory(repo):
             **MONOREPO,
             "apps/api/VERSION": "1.4.0\n",
             "apps/web/VERSION": "0.2.0\n",
-            "semrail.toml": """sync = [{ file = "VERSION", pattern = '^(\\S+)$' }]\n""",
+            "relscribe.toml": """sync = [{ file = "VERSION", pattern = '^(\\S+)$' }]\n""",
         }
     )
     units = discover(repo.path)
@@ -411,7 +411,7 @@ def test_sync_problems_are_errors_and_nothing_is_written(repo, files, message):
             **MONOREPO,
             "apps/api/VERSION": "1.4.0\n",
             **files,
-            "semrail.toml": (
+            "relscribe.toml": (
                 '[units."apps/api"]\n'
                 """sync = [{ file = "VERSION", pattern = '^(\\S+)$' },\n"""
                 """        { file = "app.json", pattern = '"version": "([^"]*)"' }]\n"""
@@ -431,7 +431,7 @@ def test_sync_must_not_target_the_manifest(repo, file):
     repo.write(
         {
             **MONOREPO,
-            "semrail.toml": f"""[units."apps/api"]\nsync = [{{ file = "{file}", pattern = '"version": "(.*)"' }}]\n""",
+            "relscribe.toml": f"""[units."apps/api"]\nsync = [{{ file = "{file}", pattern = '"version": "(.*)"' }}]\n""",
         }
     )
     with pytest.raises(ConfigError, match="sync must not target the manifest"):

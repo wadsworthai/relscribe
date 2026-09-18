@@ -1,4 +1,4 @@
-"""`semrail tag`: release detection, annotated tags, reconcile, conflicts and --push.
+"""`relscribe tag`: release detection, annotated tags, reconcile, conflicts and --push.
 
 docs/design.md, Releases and tags and CLI.
 """
@@ -152,9 +152,9 @@ def test_releases_are_listed_oldest_first(cli, repo):
 
 
 def test_tag_template_is_read_as_of_the_release_commit(cli, repo):
-    init = repo.commit("chore: init", {"package.json": pkg("app", "1.0.0"), "semrail.toml": 'tag = "v{version}"\n'})
+    init = repo.commit("chore: init", {"package.json": pkg("app", "1.0.0"), "relscribe.toml": 'tag = "v{version}"\n'})
     release = repo.commit("chore(release): 1.1.0", {"package.json": pkg("app", "1.1.0")})
-    repo.commit("chore: change the tag template", {"semrail.toml": 'tag = "{name}-{version}"\n'})
+    repo.commit("chore: change the tag template", {"relscribe.toml": 'tag = "{name}-{version}"\n'})
     assert results(tag(cli, repo, f"{init}..HEAD")) == [("v1.1.0", release, "created")]
 
 
@@ -177,17 +177,17 @@ def test_unit_renamed_or_removed_after_the_release(cli, repo):
 
 
 def test_dir_placeholder_uses_the_repository_directory_name(cli, repo):
-    init = repo.commit("chore: init", {"package.json": pkg("app", "1.0.0"), "semrail.toml": 'tag = "{dir}-{version}"\n'})
+    init = repo.commit("chore: init", {"package.json": pkg("app", "1.0.0"), "relscribe.toml": 'tag = "{dir}-{version}"\n'})
     release = repo.commit("chore(release): 1.0.1", {"package.json": pkg("app", "1.0.1")})
     assert results(tag(cli, repo, f"{init}..HEAD")) == [(f"{repo.path.name}-1.0.1", release, "created")]
 
 
 def test_configuration_error_at_a_release_commit_names_the_commit(cli, repo):
     init = repo.commit("chore: init", {"package.json": pkg("app", "1.0.0")})
-    release = repo.commit("chore(release): 1.1.0", {"package.json": pkg("app", "1.1.0"), "semrail.toml": "bogus = 1\n"})
+    release = repo.commit("chore(release): 1.1.0", {"package.json": pkg("app", "1.1.0"), "relscribe.toml": "bogus = 1\n"})
     result = cli("--root", str(repo.path), "tag", f"{init}..HEAD")
     assert result.code == 2
-    assert result.err.startswith(f"semrail: {release[:7]}: semrail.toml: unknown key")
+    assert result.err.startswith(f"relscribe: {release[:7]}: relscribe.toml: unknown key")
     assert "Traceback" not in result.err
 
 
@@ -378,7 +378,7 @@ def test_push_to_an_unknown_remote_is_a_git_error(cli, repo):
     repo.commit("chore(release): 1.1.0", {"package.json": pkg("app", "1.1.0")})
     result = cli("--root", str(repo.path), "tag", f"{init}..HEAD", "--push", "nowhere")
     assert result.code == 2
-    assert result.err.startswith("semrail: ")
+    assert result.err.startswith("relscribe: ")
     assert "Traceback" not in result.err
 
 
@@ -390,14 +390,14 @@ def test_bad_ranges_are_usage_errors(cli, repo, rng):
     repo.commit("chore: init", {"package.json": pkg("app", "1.0.0")})
     result = cli("--root", str(repo.path), "tag", rng)
     assert result.code == 2
-    assert result.err.startswith("semrail: tag: ")
+    assert result.err.startswith("relscribe: tag: ")
 
 
 def test_unknown_revision_is_a_git_error(cli, repo):
     repo.commit("chore: init", {"package.json": pkg("app", "1.0.0")})
     result = cli("--root", str(repo.path), "tag", "nope..HEAD")
     assert result.code == 2
-    assert result.err.startswith("semrail: ")
+    assert result.err.startswith("relscribe: ")
     assert "Traceback" not in result.err
 
 

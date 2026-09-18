@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping, Sequence
 
-from semrail.commits import Commit, LogEntry
+from relscribe.commits import Commit, LogEntry
 
 FILE = "CHANGELOG.md"
 

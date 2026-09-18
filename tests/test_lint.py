@@ -1,4 +1,4 @@
-"""`semrail lint`: subjects given as arguments and commits in a range (docs/design.md, CLI)."""
+"""`relscribe lint`: subjects given as arguments and commits in a range (docs/design.md, CLI)."""
 
 from __future__ import annotations
 
@@ -63,7 +63,7 @@ def test_works_outside_a_repository(cli, tmp_path, monkeypatch):
 def test_nothing_to_lint_is_a_usage_error(cli):
     result = cli("lint")
     assert result.code == 2
-    assert result.err.startswith("semrail: ")
+    assert result.err.startswith("relscribe: ")
 
 
 def test_range(cli, repo):
@@ -136,4 +136,4 @@ def test_bad_range_is_an_error(cli, repo, rev_range):
     repo.commit("chore: init")
     result = cli("--root", str(repo.path), "lint", "--range", rev_range)
     assert result.code == 2
-    assert result.err.startswith("semrail: ")
+    assert result.err.startswith("relscribe: ")

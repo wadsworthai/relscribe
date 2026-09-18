@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Purpose
 
-semrail computes [Semantic Versioning](https://semver.org/) versions and changelogs from [Conventional Commits](https://www.conventionalcommits.org/). It supports one or more packages per repository and is meant for repositories developed with agents. It is a Python ≥3.11 CLI managed with uv.
+relscribe computes [Semantic Versioning](https://semver.org/) versions and changelogs from [Conventional Commits](https://www.conventionalcommits.org/). It supports one or more packages per repository and is meant for repositories developed with agents. It is a Python ≥3.11 CLI managed with uv.
 
 ## Language
 
@@ -14,7 +14,7 @@ semrail computes [Semantic Versioning](https://semver.org/) versions and changel
 ## Principles
 
 - KISS, YAGNI, Rule of three, Occam's razor, and "premature optimization is the root of all evil" decide what gets built. Build only what a current, concrete need requires. Extract an abstraction only at the third occurrence. Optimize only after measuring. When a principle leads to leaving something out, say so briefly in the PR.
-- semrail is standalone. This repo tracks its own tasks with taskrail, and that is the only role taskrail has here. semrail must not depend on it, integrate with it, or be designed around it. semrail's code, tests and product docs (`docs/`, README) must not name it or any other sibling tool. Describe interoperation generically.
+- relscribe is standalone. This repo tracks its own tasks with taskrail, and that is the only role taskrail has here. relscribe must not depend on it, integrate with it, or be designed around it. relscribe's code, tests and product docs (`docs/`, README) must not name it or any other sibling tool. Describe interoperation generically.
 - All docs live in `docs/`. Keep them concise: short, factual statements, and don't repeat what the code already says. Comments explain why, not what.
 - Update docs in the same PR as the behaviour they describe.
 - Keep this file a short index of global rules (progressive disclosure). When a topic needs more than a few lines, write it in `docs/` and add a one-line pointer under Documentation map saying when to read it. Use plain-text paths, not @ imports, so every agent can follow them and each doc is read only when needed.
@@ -32,7 +32,7 @@ Use Conventional Commits, `type(scope): summary`, where the scope is the affecte
 ```sh
 uv run pytest                               # all tests
 uv run pytest tests/test_x.py -k some_case  # a single test
-uv run semrail --root <repo> <command>      # run the CLI against another repository
+uv run relscribe --root <repo> <command>    # run the CLI against another repository
 ```
 
 ## Documentation map
@@ -44,4 +44,4 @@ uv run semrail --root <repo> <command>      # run the CLI against another reposi
 
 ## Current state
 
-Bootstrap stage: the package, CLI (global flags, exit codes, and the `lint` and `status` commands) and test fixtures exist. `docs/design.md` is the agreed spec; `TODO.md` builds the rest in order. Ask before introducing a new tool or dependency, record the decision with its date in `docs/`, and update this file.
+Bootstrap stage: the package, CLI (global flags, exit codes, and the `lint`, `status`, `release` and `tag` commands) and test fixtures exist. `docs/design.md` is the agreed spec; `TODO.md` builds the rest in order. Ask before introducing a new tool or dependency, record the decision with its date in `docs/`, and update this file.
