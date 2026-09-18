@@ -62,6 +62,15 @@ Planned, in implement:
 - `relscribe tag --dry-run --json origin/main..HEAD` reports `v0.1.0` as `would-create` on the release commit.
 - `taskrail checks T010` (test = `uv run pytest`; lint is not configured by design).
 
+Results, in implement, with `origin/main` still at b97e6c2 and a clean tree:
+- `release --commit --json` made commit 8c8ffd0 with `files: ["pyproject.toml", "uv.lock", "CHANGELOG.md"]`, `branch: null` and `0.0.0 -> 0.1.0 (minor)`. There were no warnings.
+- `git show --stat HEAD` shows subject `chore(release): relscribe 0.0.0 -> 0.1.0`. It changes only `CHANGELOG.md` (+19), `pyproject.toml` (1 line) and `uv.lock` (1 line, the `relscribe` entry).
+- `CHANGELOG.md`: the standard header, an empty `## [Unreleased]`, then `## [0.1.0] - 2026-09-18`. Under `### Added` it lists the six `feat` commits T002–T006 and T009. Neither the `docs(chores)` scope commit nor the recorded decisions commit appears.
+- `uv lock --check`: `Resolved 7 packages`, exit 0.
+- `relscribe status`: `relscribe (.): 0.1.0, no release`, base `version change (8c8ffd0)`.
+- `relscribe tag --dry-run --json origin/main..HEAD` reports one entry: `v0.1.0`, `result: "would-create"`, `sha` 8c8ffd0, `reconciled: false`, with no warnings.
+- `taskrail checks T010 --stage implement`: test passed with `265 passed`. Lint is not configured.
+
 Scope evidence (read-only, at b97e6c2):
 - `relscribe status`: `relscribe (.): 0.0.0 -> 0.1.0 (minor)`, base `whole history`.
 - `relscribe tag --dry-run origin/main..HEAD`: `no releases to tag`.
