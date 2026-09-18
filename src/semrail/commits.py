@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -86,9 +86,9 @@ def next_version(version: str, level: str) -> str:
     raise ValueError(f"unknown bump level: {level!r}")
 
 
-def log(root: Path, rev_range: str) -> list[LogEntry]:
-    """The non-merge commits in `rev_range`, newest first."""
-    out = gitutil.git(root, "log", "--no-merges", "-z", "--format=%H%n%s%n%b", rev_range, "--")
+def log(root: Path, rev_range: str, paths: Sequence[str] = ()) -> list[LogEntry]:
+    """The non-merge commits in `rev_range` that touch `paths` (git pathspecs; all when empty), newest first."""
+    out = gitutil.git(root, "log", "--no-merges", "-z", "--format=%H%n%s%n%b", rev_range, "--", *paths)
     entries = []
     for record in out.split("\0"):
         if not record.strip():

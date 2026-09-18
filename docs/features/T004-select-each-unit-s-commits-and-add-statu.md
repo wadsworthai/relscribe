@@ -128,3 +128,35 @@ All through the CLI against real temporary repositories (`tests/test_status.py`)
 8. **`docs/design.md` Architecture** lists the modules. Recommend adding `history.py  # base resolution and each unit's commits` there, outside this lane's allowed sections. Alternative: leave Architecture stale.
 - **Risk:** a manifest with a `"version"` line that git's `-G` sees but whose value change sits on a line without the word `version` (a multi-line JSON value) is not a candidate. No real manifest writes the version that way.
 - **Risk:** reading the version at every candidate costs two `git show` calls each. Candidates are the manifest's version-line edits, few in practice; measure before optimizing.
+
+## Decisions
+
+Plan approved with every question as recommended; see `docs/autopilot/decisions/T004-select-each-unit-s-commits-and-add-statu.md`. `docs/design.md` now states the rules: the `exclude` syntax in Units, the `bump` merge in Versioning, the base and selection rules in Selecting a unit's commits, the `status --json` shape in CLI, and `history.py` in Architecture.
+
+## Implementation
+
+- Test first: `tests/test_status.py` ran before any code existed, and all 45 tests failed (`invalid choice: 'status' (choose from lint)`).
+- `src/semrail/history.py` (new), `commits.log(root, rev_range, paths=())`, and in `cli.py` the `status` command, its JSON and text rendering, and `units.ConfigError` caught with `GitError` in `main` (exit 2).
+- `history.py` reads a manifest's version at a past revision with `json`/`tomllib` itself rather than calling a private helper in `units.py`. That keeps `units.py` unchanged.
+- `ValueError` stays uncaught (decision 7). The tests cover every user-triggerable input (a bad `semrail.toml`, a bad `bump` level, a non-plain, pre-release or `v`-prefixed version, broken JSON, no unit): all exit 2 with a `semrail: ` message and no traceback.
+- An empty commit (`--allow-empty`) touches no path, so it never counts for any unit.
+- Selection uses `HEAD`, since the current version is read from the working tree. `docs/design.md` now says `HEAD` where it said `<ref>`.
+
+## Acceptance criteria → tests (`tests/test_status.py`)
+
+| AC | Tests |
+|---|---|
+| 1 | `test_tag_of_the_current_version_is_the_base`, `test_tag_template_from_config` |
+| 2 | `test_last_version_change_in_package_json`, `test_last_version_change_in_pyproject` |
+| 3 | `test_version_set_in_the_first_commit_uses_the_whole_history`, `test_version_added_to_an_existing_manifest_is_not_a_change` |
+| 4 | `test_commits_are_attributed_by_path`, `test_commit_outside_every_unit_bumps_nothing` |
+| 5 | `test_exclude_drops_commits_whose_unit_files_all_match` (global and per unit), `test_exclude_in_a_root_unit` |
+| 6 | `test_nested_unit_commits_do_not_count_for_the_outer_unit` |
+| 7 | `test_merge_commits_are_skipped` |
+| 8 | `test_bump_and_next_version` (8 cases), `test_breaking_flag_in_commits`, `test_tag_of_the_current_version_is_the_base` (squash-merged scope) |
+| 9 | `test_bump_overrides_merge_over_the_defaults` (5 cases), `test_per_unit_bump_override` |
+| 10 | `test_unparseable_subjects_are_warnings`, `test_only_unparseable_subjects_bump_nothing` |
+| 11 | `test_text_output`, `test_text_output_version_change_base`, `test_json_after_subcommand_and_enclosing_repository` |
+| 12 | `test_configuration_errors_exit_2` (9 cases) |
+| 13 | `test_repository_without_commits_is_an_error`, `test_outside_a_repository_is_an_error` |
+| 14 | `test_shallow_clone_warns_unless_the_base_is_a_tag` |

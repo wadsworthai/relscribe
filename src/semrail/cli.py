@@ -9,7 +9,7 @@ from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 
-from semrail import commits, gitutil
+from semrail import commits, gitutil, history, units
 
 # Exit codes, docs/design.md (CLI).
 EXIT_OK = 0
@@ -48,6 +48,8 @@ def _build_parser() -> argparse.ArgumentParser:
     lint.add_argument("subjects", nargs="*", metavar="<subject>", help="a subject to check, e.g. a PR title")
     lint.add_argument("--range", metavar="<from>..<to>", help="check the subjects of the commits in this range")
     lint.set_defaults(func=cmd_lint)
+    status = sub.add_parser("status", parents=[common], help="report each unit's base, commits and next version")
+    status.set_defaults(func=cmd_status)
     return parser
 
 
@@ -82,6 +84,49 @@ def cmd_lint(args: argparse.Namespace) -> int:
     return EXIT_FAILED if invalid else EXIT_OK
 
 
+def cmd_status(args: argparse.Namespace) -> int:
+    root = _root(args)
+    results = history.status(root, units.discover(root))
+    _emit(args, {"units": [_status_json(s) for s in results]}, "\n".join(_status_text(s) for s in results))
+    return EXIT_OK
+
+
+def _status_json(s: history.UnitStatus) -> dict[str, Any]:
+    return {
+        "path": s.unit.path,
+        "name": s.unit.name,
+        "version": s.unit.version,
+        "base": {"kind": s.base.kind, "sha": s.base.sha, "tag": s.base.tag},
+        "commits": [
+            {
+                "sha": e.sha,
+                "subject": e.subject,
+                "type": c.type if c else None,
+                "scope": c.scope if c else None,
+                "breaking": c.breaking if c else False,
+            }
+            for e, c in s.commits
+        ],
+        "bump": s.bump,
+        "next": s.next,
+        "warnings": s.warnings,
+    }
+
+
+def _status_text(s: history.UnitStatus) -> str:
+    head = f"{s.unit.name} ({s.unit.path}): {s.unit.version}"
+    lines = [f"{head} -> {s.next} ({s.bump})" if s.next else f"{head}, no release"]
+    if s.base.kind == "tag":
+        lines.append(f"  base: tag {s.base.tag} ({s.base.sha[:7]})")
+    elif s.base.kind == "version-change":
+        lines.append(f"  base: version change ({s.base.sha[:7]})")
+    else:
+        lines.append("  base: whole history")
+    lines += [f"  {e.sha[:7]} {e.subject}" for e, _ in s.commits]
+    lines += [f"  warning: {w}" for w in s.warnings]
+    return "\n".join(lines)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     try:
@@ -103,6 +148,6 @@ def main(argv: list[str] | None = None) -> int:
     except SemrailError as exc:
         print(f"semrail: {exc}", file=sys.stderr)
         return exc.code
-    except gitutil.GitError as exc:
+    except (gitutil.GitError, units.ConfigError) as exc:
         print(f"semrail: {exc}", file=sys.stderr)
         return EXIT_ERROR

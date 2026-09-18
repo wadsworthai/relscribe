@@ -1,6 +1,6 @@
 # Design
 
-This is the spec the code answers to. Nothing is implemented yet; the backlog in `TODO.md` builds it in order.
+This is the spec the code answers to. What is not built yet is listed in `TODO.md`.
 
 ## Scope
 
@@ -25,7 +25,7 @@ A unit is a directory with its own version.
 |---|---|---|
 | `tag` | `"{name}@{version}"` | Tag template |
 | `changelog` | `true` | Whether to write `CHANGELOG.md`. Set it to `false` when another tool owns the changelog |
-| `exclude` | `[]` | Globs of files that never cause a bump on their own, such as tests |
+| `exclude` | `[]` | Globs of files that never cause a bump on their own, such as tests. Relative to the unit directory; `*` stays within a directory and `**/` spans directories |
 | `sync` | `[]` | Other files that repeat the version, each `{ file, pattern }` with one capture group holding the version |
 | `bump` | see Versioning | Map from commit type to `"major"`, `"minor"` or `"patch"` |
 
@@ -48,7 +48,7 @@ semrail never edits `.gitattributes` and never installs merge drivers.
 | `fix`, `perf`, `refactor` | PATCH | PATCH |
 | any other type | none | none |
 
-The highest bump among a unit's commits wins. A type that the `bump` key maps to `"major"` still gives MINOR while 0.y.z.
+The highest bump among a unit's commits wins. The `bump` key's entries add types to this table or replace a type's level; the other defaults still apply. A type that the `bump` key maps to `"major"` still gives MINOR while 0.y.z.
 
 ## Commit parsing
 
@@ -61,12 +61,16 @@ The highest bump among a unit's commits wins. A type that the `bump` key maps to
 
 ## Selecting a unit's commits
 
-The commits for a unit are `git log <base>..<ref> --no-merges -- <unit path>`, minus any commit whose files in the unit all match `exclude`. The base is:
+The commits for a unit are `git log <base>..HEAD --no-merges -- <unit path>`, minus any commit whose files in the unit all match `exclude`. The base is:
 1. the tag of the unit's current version, if it exists;
 2. otherwise, the last commit that changed the unit's version;
 3. otherwise, the unit's whole history.
 
-A commit that only touches files outside every unit bumps nothing.
+- A commit changes the version when the manifest's version differs from the one in its parent. Introducing a version is not a change, so a unit never released counts its whole history.
+- `exclude` globs are git `glob` pathspecs, so git itself drops a commit whose files in the unit all match.
+- Files of a unit nested inside another unit's directory count only for the nested unit.
+- A commit that only touches files outside every unit bumps nothing.
+- Unparseable subjects are warnings. So is a shallow clone when a unit's base is not a tag, since the base may be missing from the fetched history.
 
 ## Changelog
 
@@ -100,12 +104,20 @@ Every command accepts `--json` and `--root <path>`. Without `--root`, the root i
 - Exit codes: 0 success; 1 lint or validation failed; 2 usage, configuration or git error; 4 tag conflict.
 - Errors go to stderr prefixed with `semrail: `.
 
+`semrail status --json` prints `{"units": [...]}`, one object per unit in path order, which CI can read, for example to find the units a release touches (`next` is not `null`):
+- `path`, `name`, `version`: the unit and its current version.
+- `base`: `{"kind", "sha", "tag"}`. `kind` is `"tag"`, `"version-change"` or `"history"`. `sha` is `null` only for `"history"`, and `tag` is set only for `"tag"`.
+- `commits`: every commit selected, newest first, each `{"sha", "subject", "type", "scope", "breaking"}`. `type` and `scope` are `null` when the subject does not parse.
+- `bump`: `"major"`, `"minor"`, `"patch"` or `null`. `next`: the next version, or `null` when nothing bumps.
+- `warnings`: a list of strings. Warnings never change the exit code.
+
 ## Architecture
 
 ```
 src/semrail/
   cli.py        # argparse; each subcommand is a thin cmd_*(args) -> int
   commits.py    # subject parsing and bump rules
+  history.py    # each unit's base, commits, bump and next version
   units.py      # discovery, config, reading and writing versions
   changelog.py  # Keep a Changelog rendering and insertion
   gitutil.py    # the only module that shells out to git
