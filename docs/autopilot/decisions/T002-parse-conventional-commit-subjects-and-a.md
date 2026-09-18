@@ -31,3 +31,9 @@ Reviewed: the diff `d295d8f..4486aa2` (`commits.py`, the `lint` command in `cli.
 | 1 | Summary wording for a single subject (`1 subjects valid`) | fix · leave | **fix: singular for one subject** | It is user-facing output, and the fix is one expression. Cover it with a test. |
 
 Notes carried to later tasks, not changed here: `bump()` raises `ValueError` on an unknown level in the map, and `next_version()` raises `ValueError` on a non-plain version. Validating the map is T003's config work. T004 must turn both into exit 2 at the CLI, never a traceback.
+
+## rebase after T001
+
+T001 was squash-merged into main as df184de, after an earlier plain merge (a8dfa74) was removed from main at the human's request. The branch was rebased onto origin/main (df184de) with `git rebase --onto`. There were no conflicts.
+
+After the rebase: `git diff --check` reports no conflict markers, `taskrail checks` passed, and `taskrail validate` reports 0 errors and 0 warnings.
