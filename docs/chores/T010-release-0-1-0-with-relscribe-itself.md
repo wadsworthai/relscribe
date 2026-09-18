@@ -41,6 +41,11 @@ The record-keeping commits are `docs` and `chore`, which do not bump. They neith
    Both pass `relscribe lint` (see Verification). Neither affects tagging: a commit is a release when it raises the version over its parent's, and the message is never consulted (`docs/design.md`, "Release detection"). A `chore` title does not bump, so it cannot affect the next version either.
 3. **Docs sentence (item 3).** Recommended: add it, so the rule "Task branches never change the version" is not contradicted by this merge. Alternative: leave the docs unchanged, since this is a one-off (YAGNI).
 
+## Docs (done in the docs stage)
+
+- `docs/releasing.md`: the approved sentence under "Cutting a release". The "Task branches never change the version" bullet now excepts a branch whose only purpose is the release, so the two statements agree.
+- `CLAUDE.md` and `AGENTS.md`, in step: "Current state" says 0.1.0 is released instead of calling it the next step. This line would be stale once the PR merges, so it is fixed on the way.
+
 ## Constraint: the release must be regenerated if `main` moves
 
 The changelog is computed from `main` as it was when the release commit was made. If another PR merges to `main` first, its commits come before the release's base. They would then never appear in any changelog, and a rebased release commit would carry a stale `CHANGELOG.md`. If `taskrail review` reports `rebase.needed`, do not rebase the release commit. Drop it, rebase the rest onto the new `main`, and run `release --commit` again on top. The orchestrator decides this at the close. This lane never rebases.

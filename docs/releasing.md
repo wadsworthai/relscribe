@@ -6,7 +6,7 @@
 - The PR title is a Conventional Commit and becomes the single commit on `main`, so it decides the next version. Its type reflects the most significant change.
 - Mark breaking changes with `!`.
 - Put trailers at the end of the PR description so they survive the squash.
-- Task branches never change the version or `CHANGELOG.md`.
+- Task branches never change the version or `CHANGELOG.md`, except a branch whose only purpose is the release (see Cutting a release).
 
 ## Changelog
 
@@ -29,6 +29,7 @@ relscribe is not published to any registry. The `vX.Y.Z` git tag is the release.
 3. Push the branch and open a PR whose title is exactly that subject. Squash-merge it once CI passes.
 4. On the push to `main`, `release.yml` creates the tag `v<new>` on the squash commit and pushes it. That completes the release.
 
+- A branch whose only purpose is the release may carry the release commit instead of `release/<date>`: run `release --commit` without `--branch` on it, from a clean tree based on the current `main`. Its PR title may be any Conventional Commit, because `tag` detects the version change, not the message.
 - If the run fails before pushing, re-run it. `tag` creates only the tags that are missing.
 - If the tag job exits with a conflict, a tag with that name already exists on another commit. A human resolves it. A published tag never moves.
 
