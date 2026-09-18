@@ -24,3 +24,11 @@ Reviewed: `docs/features/T005-write-changelogs-and-add-release.md` at 63a56b0, t
 | 13 | `release --json` paragraph under the CLI table | allowed · not | **allowed** | It sits next to the `status --json` paragraph and describes only this command. |
 
 Implement test-first and record the failing run.
+
+## implement gate
+
+Reviewed: `changelog.py` in full and the `cli.py` diff in c9684b4; the test-first evidence (collection error, then 25 errors before the code existed); `taskrail checks T005` re-run (214 passed). Exercised on a scratch pnpm repository whose legacy changelog started with `## 0.0.1 — 2026-09-08` and held an `### Unknown` group. `release --branch --commit` wrote `0.0.1 -> 0.1.0` and created `release/2026-09-18` with the commit `chore(release): @x/api 0.0.1 -> 0.1.0`. The changelog gained the standard header, `## [Unreleased]` and `## [0.1.0] - 2026-09-18` (Added, then Changed with `**BREAKING:**`), and the old section was left byte-identical below.
+
+| # | Question | Options | Decision | Reason |
+|---|---|---|---|---|
+| 1 | Import-line change in `cli.py` (`changelog`, `datetime`) | accept · local imports | as recommended | It follows the module convention. The possible conflict with T006 is additive, so both names are kept at hand-off. |
