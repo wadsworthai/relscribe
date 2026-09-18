@@ -43,13 +43,16 @@ semrail never edits `.gitattributes` and never installs merge drivers.
 | `fix`, `perf`, `refactor` | PATCH | PATCH |
 | any other type | none | none |
 
-The highest bump among a unit's commits wins.
+The highest bump among a unit's commits wins. A type that the `bump` key maps to `"major"` still gives MINOR while 0.y.z.
 
 ## Commit parsing
 
-- The subject has the form `type(scope)!: description`. The scope is free text and may contain `:`, as in `feat(0037:api:session): …`.
+- The subject has the form `type(scope)!: description`. The scope is free text without parentheses and may contain `:`, as in `feat(0037:api:session): …`.
+- The type is case-insensitive, as Conventional Commits requires: `Feat:` is `feat`.
 - A trailing reference such as `(#82)` or `(#T054)` stays part of the description.
+- A body line starting with `BREAKING CHANGE: ` or `BREAKING-CHANGE: ` marks the commit breaking, wherever it is in the body. The token is upper-case only.
 - A subject that does not parse contributes nothing. It is reported as a warning, and `semrail lint` fails on it.
+- `semrail lint --range` skips merge commits, like the selection of a unit's commits.
 
 ## Selecting a unit's commits
 

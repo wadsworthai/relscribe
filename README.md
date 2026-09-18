@@ -10,10 +10,10 @@ semrail reads the [Conventional Commits](https://www.conventionalcommits.org/) h
 
 | Commit | Bump |
 |---|---|
-| `fix: …` | PATCH |
+| `fix: …`, `perf: …`, `refactor: …` | PATCH |
 | `feat: …` | MINOR |
-| `feat!: …`, or any type with a `BREAKING CHANGE:` footer | MAJOR |
-| any other type (`docs`, `chore`, `refactor`, …) | none |
+| `feat!: …`, or any type with a `BREAKING CHANGE:` / `BREAKING-CHANGE:` footer | MAJOR |
+| any other type (`docs`, `chore`, `test`, …) | none |
 
 Before 1.0.0, a breaking change bumps MINOR instead of MAJOR.
 
