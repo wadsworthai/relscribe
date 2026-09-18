@@ -116,3 +116,16 @@ Plan approved with every question as recommended; see `docs/autopilot/decisions/
 | 6 | `test_query_whether_a_commit_is_a_release`, `test_query_the_units_a_release_branch_releases` |
 | 7 | `test_dry_run_needs_no_committer_identity` |
 | 8 | `test_dry_run_text_output`, `test_text_output` (` (reconciled)` in a real run) |
+
+## Verify
+
+A script under the session scratchpad (not committed) built a pnpm workspace with `apps/api` and `apps/web`, pushed `main` to a local bare `origin`, and ran `uv run --directory <worktree> relscribe --root <scratch repo> …`. `main` held an untagged `@s/web` 1.0.1 release (`7a94911`). Branch `release/2026-09-18` held the release commit `64089c8` for api 1.1.0 and web 1.1.0, followed by a docs commit `3e9ee40`.
+
+1. **Release branch query.** `tag --dry-run main..release/2026-09-18` reported `would-create` for `@s/api@1.1.0` and `@s/web@1.1.0` on `64089c8` with `reconciled: false`, and for `@s/web@1.0.1` on `7a94911` with `reconciled: true` (text: `would-create @s/web@1.0.1 7a94911 (reconciled)`). Exit 0. `push` was `null`, and no local tag was created.
+2. **Is a commit a release?** `64089c8^..64089c8` gave the same three entries. `3e9ee40^..3e9ee40` (docs) gave only `reconciled: true` entries, so the commit releases nothing. Exit 0.
+3. **`--dry-run --push origin`** printed `relscribe: tag: --dry-run and --push cannot be combined`. Exit 2. No tags were created locally or on `origin`.
+4. **Real run afterwards.** `tag 64089c8^..64089c8 --push origin` printed the same three lines with `created`, then `pushed 3 tags to origin`. A dry run repeated afterwards reported all three as `existing`.
+5. **Conflict.** With a hand-made `@s/api@1.2.0` on `3e9ee40` and the api 1.2.0 release `503f71f`, the dry run printed `conflict @s/api@1.2.0 503f71f: already on 3e9ee40`. Exit 4.
+6. **No committer identity.** With `user.useConfigOnly=true` and no identity, the dry run printed `would-create @s/api@1.2.0 503f71f` and exited 0. The real run failed with `Committer identity unknown … fatal: no email was given and auto-detection is disabled`, exit 2.
+
+The behaviour matches the plan.
