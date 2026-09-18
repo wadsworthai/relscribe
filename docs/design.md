@@ -94,6 +94,7 @@ The commits for a unit are `git log <base>..HEAD --no-merges -- <unit path>`, mi
 - **Reconcile.** Besides the range, `relscribe tag` looks at each unit's newest release reachable from `<from>` and creates its tag if it is missing, which covers a skipped CI run and a unit released before it had tags. Older untagged releases stay untagged.
 - **Tags.** Tags are annotated, with the message `<name> <version>`, and follow the unit's `tag` template. git needs a committer identity to create them. A published tag never moves. If a tag already exists on the same commit, creating it is a no-op. If it exists on another commit, it is a conflict that a human resolves; the other tags are still created, and the exit code is 4.
 - **Push.** `--push <remote>` pushes only the tags the run created, in one push. A tag the remote already has on another commit is rejected, which is a conflict (exit 4); any other push failure is a git error (exit 2). CI needs a checkout with full history and tags.
+- **Dry run.** `--dry-run` creates and pushes nothing and needs no committer identity. It reports each tag the run would create as `would-create`, and everything else, the exit code included, as the real run would. CI uses it as a query: `<sha>^..<sha>` tells whether a commit is a release and of which units, for example before promoting it; `<mainline>..<release-branch>` tells which units a release branch releases, for example to test only those. Reconciled entries are marked, so a query can drop them. `--dry-run` with `--push` is a usage error.
 
 ## CLI
 
@@ -103,7 +104,7 @@ Every command accepts `--json` and `--root <path>`. Without `--root`, the root i
 |---|---|
 | `relscribe status` | Reports per unit: current version, base, the commits that count, the next version, and warnings |
 | `relscribe release [--commit] [--branch]` | Writes the next versions, `sync` files and changelogs of every unit with a next version, or reports that there is nothing to release. `--commit` makes the release commit. `--branch` first creates `release/<YYYY-MM-DD>[-N]` (UTC date; `-N` from 2 when a local or remote-tracking branch has the name). It never pushes and never tags |
-| `relscribe tag <from>..<to> [--push <remote>]` | Tags every release commit in the range, plus each unit's latest release before it when that one is untagged. CI runs it on each push to the release branch with the push's before and after commits |
+| `relscribe tag <from>..<to> [--push <remote> \| --dry-run]` | Tags every release commit in the range, plus each unit's latest release before it when that one is untagged. CI runs it on each push to the release branch with the push's before and after commits. `--dry-run` only reports what it would tag |
 | `relscribe lint [<subject>…] [--range <from>..<to>]` | Checks that subjects are Conventional Commits, for example on pull request titles in CI |
 
 - Exit codes: 0 success; 1 lint or validation failed; 2 usage, configuration or git error; 4 tag conflict.
@@ -123,8 +124,8 @@ Every command accepts `--json` and `--root <path>`. Without `--root`, the root i
 - With nothing to release, `units` and `files` are empty and the exit code is 0.
 
 `relscribe tag --json` prints `{"tags": [...], "push": ..., "warnings": [...]}`:
-- `tags`: one object per release, reconciled ones first, then the range oldest first and by unit path within a commit: `tag`, `path`, `name`, `version`, `sha` (the release commit), `result` (`"created"`, `"existing"` or `"conflict"`) and `existing_sha` (the commit the tag already points to, for `"conflict"` only).
-- `push`: `{"remote", "pushed", "rejected"}`, lists of tag names, or `null` without `--push`.
+- `tags`: one object per release, reconciled ones first, then the range oldest first and by unit path within a commit: `tag`, `path`, `name`, `version`, `sha` (the release commit), `result` (`"created"`, `"would-create"` under `--dry-run`, `"existing"` or `"conflict"`), `existing_sha` (the commit the tag already points to, for `"conflict"` only) and `reconciled` (`true` for a release found by reconcile, before the range). The text output appends ` (reconciled)` to those.
+- `push`: `{"remote", "pushed", "rejected"}`, lists of tag names, or `null` without `--push` (always under `--dry-run`).
 - `warnings`: the shallow-clone warning, as in `status`.
 
 ## Architecture

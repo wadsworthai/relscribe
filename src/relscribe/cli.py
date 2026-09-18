@@ -58,6 +58,7 @@ def _build_parser() -> argparse.ArgumentParser:
     tag = sub.add_parser("tag", parents=[common], help="tag the release commits in a range")
     tag.add_argument("range", metavar="<from>..<to>", help="the commits to examine, e.g. a push's before..after")
     tag.add_argument("--push", metavar="<remote>", help="push the tags created to this remote")
+    tag.add_argument("--dry-run", action="store_true", help="report the tags it would create, creating none")
     tag.set_defaults(func=cmd_tag)
     return parser
 
@@ -254,7 +255,9 @@ def cmd_tag(args: argparse.Namespace) -> int:
     from_rev, sep, to_rev = args.range.partition("..")
     if not sep or not from_rev or not to_rev or to_rev.startswith(".") or ".." in to_rev:
         raise RelscribeError(f"tag: the range must be <from>..<to>, got {args.range!r}")
-    outcome = tags.run(_root(args), from_rev, to_rev, args.push)
+    if args.dry_run and args.push is not None:
+        raise RelscribeError("tag: --dry-run and --push cannot be combined")
+    outcome = tags.run(_root(args), from_rev, to_rev, args.push, args.dry_run)
     _emit(args, _tag_json(outcome), _tag_text(outcome))
     return EXIT_CONFLICT if outcome.conflict else EXIT_OK
 
@@ -270,6 +273,7 @@ def _tag_json(o: tags.Outcome) -> dict[str, Any]:
                 "sha": t.release.sha,
                 "result": t.result,
                 "existing_sha": t.existing_sha,
+                "reconciled": t.reconciled,
             }
             for t in o.tags
         ],
@@ -282,7 +286,9 @@ def _tag_text(o: tags.Outcome) -> str:
     lines = []
     for t in o.tags:
         line = f"{t.result} {t.tag} {t.release.sha[:7]}"
-        lines.append(f"{line}: already on {t.existing_sha[:7]}" if t.existing_sha else line)
+        if t.existing_sha:
+            line += f": already on {t.existing_sha[:7]}"
+        lines.append(f"{line} (reconciled)" if t.reconciled else line)
     if not lines:
         lines.append("no releases to tag")
     if o.push:
