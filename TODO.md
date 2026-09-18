@@ -19,4 +19,4 @@ Done when: relscribe 0.1.0 is on PyPI, released and tagged by relscribe itself
 | ✅ | T005 | feature | 5   | T004       | Write changelogs and add release | Keep a Changelog rendering and semrail release --commit/--branch, per docs/design.md Changelog and Releases. |
 | ✅ | T006 | feature | 3   | T004       | Tag merged releases            | semrail tag <from>..<to> [--push], release detection by version change, per docs/design.md Releases and tags. |
 | ⬜ | T007 | chore   | 3   | T005, T006, T008 | Publish to PyPI and release 0.1.0 with relscribe itself | CI for tests and PR-title lint, trusted-publishing workflow, README usage and migration guide, first self-release. |
-| ⬜ | T008 | chore   | 2   | —          | Rename the tool from semrail to relscribe | Package, CLI, config file (relscribe.toml), error prefix, docs, README and agent files; historical task records unchanged. |
+| ✅ | T008 | chore   | 2   | —          | Rename the tool from semrail to relscribe | Package, CLI, config file (relscribe.toml), error prefix, docs, README and agent files; historical task records unchanged. |
