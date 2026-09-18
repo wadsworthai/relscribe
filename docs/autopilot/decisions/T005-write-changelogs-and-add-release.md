@@ -32,3 +32,7 @@ Reviewed: `changelog.py` in full and the `cli.py` diff in c9684b4; the test-firs
 | # | Question | Options | Decision | Reason |
 |---|---|---|---|---|
 | 1 | Import-line change in `cli.py` (`changelog`, `datetime`) | accept · local imports | as recommended | It follows the module convention. The possible conflict with T006 is additive, so both names are kept at hand-off. |
+
+## rebase after T004
+
+T004 was squash-merged into main as 1b5089a. The branch was rebased with `git rebase --onto origin/main 0473879`, with no conflicts. After the rebase, `git diff --check` reports no conflict markers, `taskrail checks T005` passed, and `taskrail validate` reports 0 errors and 0 warnings.
