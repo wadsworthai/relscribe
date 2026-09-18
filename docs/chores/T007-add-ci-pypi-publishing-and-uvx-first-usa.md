@@ -1,4 +1,4 @@
-# T007 — Add CI, PyPI publishing and uvx-first usage docs
+# T007 — Add CI, release tagging and uvx-first usage docs
 
 ## Goal
 
@@ -10,7 +10,7 @@ This task gives the repository:
 
 T010 then cuts 0.1.0 by following `docs/releasing.md`.
 
-**Scope change (human, during implement):** relscribe is not published to PyPI or any other registry for now. The `vX.Y.Z` git tag is the release artifact. Consumers run a pinned tag with `uvx --from git+https://github.com/wadsworthai/relscribe@vX.Y.Z relscribe`. The publish job, the `pypi` environment and every PyPI mention were therefore dropped from the approved change set. The task's title still says "PyPI publishing"; it is kept as the task's recorded name.
+**Scope change (human, during implement):** relscribe is not published to PyPI or any other registry for now. The `vX.Y.Z` git tag is the release artifact. Consumers run a pinned tag with `uvx --from git+https://github.com/wadsworthai/relscribe@vX.Y.Z relscribe`. The publish job, the `pypi` environment and every PyPI mention were therefore dropped from the approved change set. The task was retitled to match. Its artifact path and branch name keep the original wording.
 
 The premises held at `origin/main` (3b65731): there was no `.github/`, no `relscribe.toml` and no `CHANGELOG.md`, and `pyproject.toml` had version `0.0.0`.
 
@@ -36,6 +36,12 @@ The premises held at `origin/main` (3b65731): there was no `.github/`, no `relsc
   - it runs `uv run relscribe tag "$BEFORE..$AFTER" --push origin`, where `BEFORE` and `AFTER` are `github.event.before` and `github.sha`, both passed through `env`.
 - The pushed `vX.Y.Z` tag is the release. There is no build and no upload.
 - This repository runs its own source (`uv run`) because it is relscribe itself. Each merge is tagged by the code being merged, and there is no earlier release to pin to. Consumers pin a tag with `uvx --from git+…`.
+
+### Backlog (`TODO.md`, approved after implement)
+
+- `taskrail edit T010 --description "… confirm CI creates and pushes the v0.1.0 tag (docs/releasing.md)."`
+- `taskrail edit T007 --title "Add CI, release tagging and uvx-first usage docs"`
+- The E01 "Done when" line reads "relscribe 0.1.0 is released and tagged v0.1.0 by relscribe itself". It was hand-edited, because the CLI has no epic edit command.
 
 ### `relscribe.toml` (new)
 
@@ -110,7 +116,6 @@ The scope decisions are recorded in `docs/autopilot/decisions/T007-add-ci-pypi-p
 - A linter, formatter, coverage tool or type-checker.
 - Any change to relscribe's code.
 - Windows or macOS CI.
-- Backlog wording that still names PyPI: the E01 "Done when" line and T010's description. That is for the orchestrator or the human (see the implement gate).
 
 ## Verification
 
