@@ -75,7 +75,8 @@ gives another lane, ask at your next gate instead.
 
 ## Workspace (restart from the branch)
 
-- You replace an earlier lane for <ID> that can no longer be resumed. Its branch `<BRANCH>` and
+- You take over a lane for <ID> that stopped: an earlier lane that can no longer be resumed, or one
+  whose escalation the human has now answered. Its branch `<BRANCH>` and
   worktree `<WORKTREE>` already exist, on base `<BASE>`: work inside them; do not create a
   workspace, and do not stop because the branch exists.
 - Inside the worktree, claim before any edit: `taskrail claim <ID> --run <RUN>`. The earlier

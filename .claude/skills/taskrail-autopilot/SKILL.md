@@ -36,6 +36,14 @@ skill is installed. This rule lives here, in the text every agent reads, not onl
    is found from any checkout, since that command records its branch.
 4. Any other failure: act on the exit code as the `taskrail` skill says, and stop.
 
+**Plan the count against your own context.** A lane ends with its task; you accumulate every lane's
+report, every gate answer and every hand-off, so your session is the one that fills up — and that,
+not compaction, is what bounds a run. Measure the cost once for yourself: the context you are
+served per dispatched task, over what a session costs before any task starts, against the context
+window you have. That is how many tasks you hold. When the human asks for more than that, say so
+and propose the count you can hold; the rest goes to a fresh session through *Resume a run*, which
+is the planned path for a long backlog and not only a recovery from a lost session.
+
 When the human adds tasks to a run or raises its count, extend that run rather than starting
 another: `taskrail autopilot extend <R> --tasks <IDs> --json` for a run started with `--tasks`, which
 raises its count by the tasks added, or `taskrail autopilot extend <R> --count <N> --json` for a run
@@ -67,9 +75,10 @@ to fill the lanes it frees.
    `taskrail autopilot lane <ID> --run <R> --group <G>`.
 5. `skipped` and `limited_by` say why a task did not start; mention them when they matter.
 6. Refill as soon as a lane frees, without waiting for its hand-off: once you have reviewed a
-   lane's close (its task is `done-branch`), recorded it failed, or its task was discarded, run
-   `next --run <R>` again. The run's count caps what starts; never start more tasks than the human
-   asked for.
+   lane's close (its task is `done-branch`), escalated it to the human, recorded it failed, or its
+   task was discarded, run `next --run <R>` again. An escalated or failed lane keeps its workspace
+   but frees its lane, and `status` reports such a task with `holds_lane: false`. The run's count
+   caps what starts; never start more tasks than the human asked for.
 7. A dispatch expires. A task `next` dispatched that no lane has claimed within
    `[git].claim_grace_minutes` (15 by default) reads `pending` again: it no longer holds a lane or
    its resource values, and a later `next`, in any run, may dispatch it again. So launch each lane
@@ -146,6 +155,23 @@ content the task's record already shows approved is not a new escalation: record
 same way. A later change to an approved file flags it again. Other lanes keep going meanwhile. Reopening a task needs the human's say-so, as the
 `taskrail` skill says.
 
+**An escalated lane holds no lane of the run.** Its task keeps its claim, branch and worktree, and
+`next` may start another task in its place, so waiting for a human never stalls the run. When the
+human answers:
+
+1. record the answer in the task's record, naming who gave it;
+2. record `taskrail autopilot lane <ID> --run <R> --state parked --reason <the answer>`: the task
+   keeps its workspace and waits for a lane;
+3. run `taskrail autopilot next --run <R> --json`. It sends parked tasks back before any task that
+   has never started, oldest answer first, and only while a lane is free; its `parked` list names
+   those still waiting and why (`no free lane`, a full group, a resource). Never judge for yourself
+   whether a lane is free — `next` computes that, and an answer that arrives while every lane is
+   busy waits there, visible in `parked` and in `status` as `holds_lane: false`;
+4. for each one it dispatches — its entry has `restart: true` — resume the lane by its handle while
+   that still reaches it, or restart it from its branch with the lane brief's restart workspace
+   section, giving it the answers; then record the handle with
+   `taskrail autopilot lane <ID> --run <R> --handle <H> --state running`.
+
 A lane that cannot finish is recorded
 `taskrail autopilot lane <ID> --run <R> --state failed --reason <why>` and reported; run
 `taskrail autopilot notify --event lane-failed --run <R> --task <ID>`. It keeps its claim, branch
@@ -214,13 +240,14 @@ starting another. Resuming needs the human's request but no new count, and never
 3. When the handle no longer reaches it, restart the lane from its branch, where everything it
    finished is committed. Restart a `running` lane only once `status` reports it `silent`, so an
    earlier sub-session that may still be working never shares the worktree with a new one. Answer
-   a `gate` lane's gate first, and an `escalated` lane's once the human has. Fill
+   a `gate` lane's gate first; an `escalated` lane comes back through the queue as *Escalate*
+   says, once the human has answered. Fill
    `references/lane-brief.md` with its restart workspace section, naming the last gate the record
    answers and the answers to apply, launch the lane, and record the new handle:
    `taskrail autopilot lane <ID> --run <R> --handle <H> --state running`.
 4. Go on as usual for the rest: a `done-branch` or `discarded-branch` task in `handoff.queue` has its close reviewed and is handed off, a
-   `dispatched` task whose lane never started expires as *Dispatch* says, and
-   `next --run <R>` fills the lanes that are free.
+   `dispatched` task whose lane never started expires as *Dispatch* says, a `parked` task is sent
+   back by `next` as *Escalate* says, and `next --run <R>` fills the lanes that are free.
 
 ## Known conflict classes
 
@@ -269,3 +296,11 @@ claims with `taskrail claim <ID> --ignore-deps --run <R>`, and the task's record
   per Bash call, absolute paths, `git -C` and `taskrail --root` rather than `cd … &&` — and
   re-run a lane's checks at a gate or at hand-off with `taskrail checks <ID>`, which runs them
   in its worktree with its resources.
+- **A measured figure for *Plan the count against your own context*.** Nine autopilot runs of
+  taskrail's own repository were harvested on Claude Code, all on one 1M-context model: the two
+  long runs cost their orchestrator 36,728 and 44,343 tokens of context per dispatched task, over a
+  session overhead of 32,000–39,000 — **roughly 21 to 26 tasks in a 1M context**. Lanes were never
+  the constraint: 38 of them peaked between 78,404 and 355,752 tokens, and neither they nor any
+  orchestrator ever compacted. Start from that band, and measure your own if your model or your
+  window differs — the band scales with the window, so the same rate against 200k is four or five
+  tasks.
