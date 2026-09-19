@@ -29,3 +29,4 @@ Done when: relscribe 0.1.0 is released and tagged v0.1.0 by relscribe itself
 | ✓  | ID   | Kind    | Pts | Depends On | Title                          | Description                    |
 |----|------|---------|-----|------------|--------------------------------|--------------------------------|
 | ⬜ | T011 | chore   | 1   | —          | Run taskrail validate in CI    | Add a job to .github/workflows/ci.yml that runs .taskrail/bin/taskrail validate on every pull request and push to main, so a malformed backlog fails the build. |
+| ⬜ | T012 | chore   | 1   | —          | Require the pr-title check before merging | Make pr-title a required status check on main in the repository's branch protection, so a PR whose title is not a valid Conventional Commit cannot be merged; only a maintainer can change it (docs/releasing.md Repository setup). |
