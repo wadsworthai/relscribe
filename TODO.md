@@ -5,6 +5,7 @@
 | ID  | Epic | Objective | File |
 |-----|------|-----------|------|
 | E01 | relscribe 0.1 | Ship a public CLI that computes per-unit SemVer versions and Keep a Changelog changelogs from Conventional Commits, as specified in docs/design.md | —    |
+| E02 | Repository upkeep | Keep this repository's own automation and backlog trustworthy after 0.1 | —    |
 
 ## E01 — relscribe 0.1
 
@@ -22,3 +23,9 @@ Done when: relscribe 0.1.0 is released and tagged v0.1.0 by relscribe itself
 | ✅ | T008 | chore   | 2   | —          | Rename the tool from semrail to relscribe | Package, CLI, config file (relscribe.toml), error prefix, docs, README and agent files; historical task records unchanged. |
 | ✅ | T009 | feature | 2   | —          | Add a dry run to tag           | relscribe tag --dry-run <from>..<to>: report the releases and tags it would create, without creating or pushing any, per docs/design.md Releases and tags. |
 | ✅ | T010 | chore   | 2   | T007       | Release 0.1.0 with relscribe itself | On an up-to-date main run uv run relscribe release --branch --commit, open the release PR, squash-merge, and confirm CI creates and pushes the v0.1.0 tag (docs/releasing.md).        |
+
+## E02 — Repository upkeep
+
+| ✓  | ID   | Kind    | Pts | Depends On | Title                          | Description                    |
+|----|------|---------|-----|------------|--------------------------------|--------------------------------|
+| ⬜ | T011 | chore   | 1   | —          | Run taskrail validate in CI    | Add a job to .github/workflows/ci.yml that runs .taskrail/bin/taskrail validate on every pull request and push to main, so a malformed backlog fails the build. |
