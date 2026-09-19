@@ -1,6 +1,6 @@
 ---
 name: taskrail
-description: Work a taskrail backlog (TODO.md grouped by epics) through the taskrail CLI — find, claim, create and close tasks, and follow the procedure every task kind shares. Use whenever a task ID such as T012 is mentioned, when asked what to work on next, when adding tasks or epics, and before running any taskrail-* executor skill.
+description: Work a taskrail backlog (a Markdown file, `TASKRAIL.md` by default, grouped by epics) through the taskrail CLI — find, claim, create and close tasks, and follow the procedure every task kind shares. Use whenever a task ID such as T012 is mentioned, when asked what to work on next, when adding tasks or epics, and before running any taskrail-* executor skill.
 license: MIT
 metadata:
   source: https://github.com/wadsworthai/taskrail
@@ -8,9 +8,10 @@ metadata:
 
 # taskrail
 
-The backlog is Markdown: `TODO.md` holds an `## Epics` table and one section per epic, and an
-epic may live in its own file instead. Each task is a table row with a status (`⬜` pending,
-`✅` done, `❌` discarded), an ID, a kind, dependencies and a title.
+The backlog is Markdown: the file the repository's config names — `TASKRAIL.md` by default — holds
+an `## Epics` table and one section per epic, and an epic may live in its own file instead.
+`taskrail show <ID> --json` reports the file a task's row is in. Each task is a table row with a
+status (`⬜` pending, `✅` done, `❌` discarded), an ID, a kind, dependencies and a title.
 
 **The CLI owns IDs and statuses.** Never invent an ID, never type a status emoji into a row,
 and never reformat a table. Create tasks with `taskrail new`, close them with `taskrail done`
@@ -61,11 +62,14 @@ of `taskrail show`) supplies what happens inside each stage.
    `taskrail branch` exit 5. Stop and ask only when `branch` is `null` (a detached `HEAD`) or when
    the task's live claim (`claim.branch`) names another branch than `branch`; otherwise go on to
    claiming, in the checkout you are in. Under `"task"`: run `git fetch <base.remote>` first, with
-   the mainline's own remote that `show` reported, then `taskrail show <ID> --json --fetch` —
-   which also brings in branch names other clones recorded, when the repository mirrors them: its
-   `base.onto` is the ref to branch from — the local or the remote mainline, whichever is further
-   ahead, or, when `base.dependency` names a dependency finished only on its unmerged branch, that
-   branch. If `base.diverged` is true, stop and ask which one to use; if `base.onto` is null, stop
+   the mainline's own remote that `show` reported, then `taskrail show <ID> --json --fetch`. The
+   `--fetch` does nothing, and says nothing, unless the repository sets
+   `[git].branch_record_remote`; where it is set, it brings in the branch names other clones
+   recorded, without which a task finished on a branch renamed in another clone reads here as
+   pending on a template name. Take `show`'s `base.onto` as the ref to branch from — the local or
+   the remote mainline, whichever is further ahead, or, when `base.dependency` names a dependency
+   finished only on its unmerged branch, that branch. If `base.diverged` is true, stop and ask
+   which one to use; if `base.onto` is null, stop
    and report `base.reason`. If `base.row` is `missing`, the task's row exists only in this
    checkout, and a workspace created from `base.onto` would not contain it: run
    `taskrail workspace <ID> --json` instead of the git commands below. It creates the branch and
@@ -93,7 +97,9 @@ of `taskrail show`) supplies what happens inside each stage.
    branch: switch to that branch, or name it with `taskrail branch`, before any edit. Under
    `"current"`, where `taskrail branch` exits 5, a `warning` means a detached `HEAD`: check out a
    branch before any edit.
-5. **Stages.** Take `kind_descriptor.stages` in order. Skip a stage whose `applies` is false: its
+5. **Stages.** Before the first stage, read the repository's own agent instruction files, if it
+   has any, and follow what they ask of the work you are about to do. Take
+   `kind_descriptor.stages` in order. Skip a stage whose `applies` is false: its
    column does not match this task. When `applies` and `judgement` are both true, decide whether
    the stage is relevant to this task; to skip it, record the stage and your reason in the
    artifact and in the next gate report — and if its gate is `always`, stop and ask before
